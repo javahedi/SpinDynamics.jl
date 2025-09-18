@@ -2,13 +2,14 @@ module Chebyshev
 
 using LinearAlgebra
 using SpecialFunctions
+using ArnoldiMethod
 using FFTW
 using ...Basis
 using ...Hamiltonian
 using ...InitialStates
 using ...Observables
 
-export chebyshev_time_evolve, lanczos_extremal
+export chebyshev_time_evolve, lanczos_extremal, estimate_energy_bounds
 export  run_chebyshev_sector, run_chebyshev_full
 
 
@@ -30,7 +31,7 @@ end
 
 # ---------------------------------------------------------
 # Chebyshev time evolution (full Hilbert space)
-function chebyshev_time_evolve(ψ0::Vector{<:Number}, t::Float64,
+function chebyshev_time_evolve(ψ0::Vector{<:Number}, dt::Float64,
                                applyH!, p::SpinParams;
                                M::Int=300, E_bounds::Tuple{Float64,Float64}=(-1.0,1.0),
                                states=nothing, idxmap=nothing)
@@ -53,7 +54,7 @@ function chebyshev_time_evolve(ψ0::Vector{<:Number}, t::Float64,
     end
     @. φ1 = (φ1 - b*φ0)/a
 
-    @. ψt = besselj(0, a*t) * φ0 + 2im * besselj(1, a*t) * φ1
+    @. ψt = besselj(0, a * dt) * φ0 + 2im * besselj(1, a * dt) * φ1
 
     for k in 2:M
         fill!(φtmp, 0.0)
@@ -64,11 +65,16 @@ function chebyshev_time_evolve(ψ0::Vector{<:Number}, t::Float64,
         end
         @. φtmp = (φtmp - b*φ1)/a
         @. φtmp = 2*φtmp - φ0
-        ck = 2.0 * im^k * besselj(k, a*t)
+        ck = 2.0 * im^k * besselj(k, a * dt)
         @. ψt += ck * φtmp
         φ0, φ1 = φ1, φtmp
     end
 
+    # Apply the phase factor e^{-i E_0 dt}
+    phase = exp(-im * b * dt)
+    @. ψt *= phase
+
+   
     # Renormalize for exact norm
     ψt ./= norm(ψt)
 
@@ -83,48 +89,52 @@ end
 # Lanczos extremal eigenvalues (sector)
 # ---------------------------------------------------------
 function lanczos_extremal(applyH!, ψ0::AbstractVector{T}, p::SpinParams;
-            m::Int=80, states=nothing, idxmap=nothing) where T<:Number
+            m::Int=80, states=nothing, idxmap=nothing, tol::Float64=1e-12) where T<:Number
 
     N = length(ψ0)
-    V = zeros(T, N, m)
     α = zeros(Float64, m)
     β = zeros(Float64, m-1)
     
     # Normalize initial vector
-    v = copy(ψ0)
-    v_norm = norm(v)
-    if v_norm < 1e-12
+    v_prev = copy(ψ0)
+    v_prev_norm = norm(v_prev)
+    if v_prev_norm < tol
         error("Initial vector has zero norm")
     end
-    v ./= v_norm
-    V[:,1] = v
+    v_prev ./= v_prev_norm
     
     w = zeros(T, N)
-
+    v_curr = zeros(T, N)
+    
     for j in 1:m
         # Apply Hamiltonian
         if states === nothing
-            applyH!(w, V[:,j], p)
+            applyH!(w, v_prev, p)
         else
-            applyH!(w, V[:,j], p, states, idxmap)
+            applyH!(w, v_prev, p, states, idxmap)
         end
-      
+        
+        # Compute α[j] = ⟨v_prev|H|v_prev⟩
+        α[j] = real(dot(v_prev, w))
         
         # Orthogonalize against previous vectors
-        for k in 1:j
-            α[j] = real(dot(V[:,k], w))  # Ensure real value for symmetric H
-            @. w -= α[j] * V[:,k]
+        if j == 1
+            @. w -= α[j] * v_prev
+        else
+            @. w -= α[j] * v_prev + β[j-1] * v_curr
         end
         
         if j < m
             β[j] = norm(w)
-            if β[j] < 1e-12
+            if β[j] < tol
                 # Early termination if breakdown occurs
                 α = α[1:j]
                 β = β[1:j-1]
                 break
             end
-            V[:,j+1] = w / β[j]
+            
+            # Prepare for next iteration
+            v_curr, v_prev = v_prev, w / β[j]  # Swap and normalize
         end
     end
 
@@ -141,12 +151,52 @@ end
 
 
 
+"""
+    estimate_energy_bounds(applyH!, ψ0, p; m=80, states=nothing, idxmap=nothing)
+
+Estimate the minimum and maximum eigenvalues (Emin, Emax) of the Hamiltonian 
+using Lanczos applied to `ψ0`.
+
+Arguments:
+- `applyH!`: function to apply H to a vector
+- `ψ0`: initial state vector
+- `p`: SpinParams
+- `m`: number of Lanczos iterations (default = 80)
+- `states, idxmap`: only needed for sector representation
+
+Returns:
+- `(Emin, Emax)::Tuple{Float64,Float64}`
+"""
+function estimate_energy_bounds(applyH!, ψ0::AbstractVector, p::SpinParams;
+                                m::Int=80, states=nothing, idxmap=nothing)
+
+    # Estimate Emax
+    _, Emax = lanczos_extremal(applyH!, ψ0, p; m=m, states=states, idxmap=idxmap)
+
+
+    # Define negative Hamiltonian
+    function apply_H_neg!(out, ψ, p, states=nothing, idxmap=nothing)
+        if states === nothing
+            applyH!(out, ψ, p)
+        else
+            applyH!(out, ψ, p, states, idxmap)
+        end
+        @. out = -out
+    end
+
+    _, Emax_neg = lanczos_extremal(apply_H_neg!, ψ0, p; m=m, states=states, idxmap=idxmap)
+    Emin = -Emax_neg
+
+    return Emin, Emax
+end
+
+
 
 # ---------------------------------------------------------
 # High-level wrapper: Chebyshev (sector)
 # ---------------------------------------------------------
 function run_chebyshev_sector(L::Int, nup::Int, hopping, h, 
-                                zz, t::Float64; M::Int=500, lanc_m::Int=80)
+                                zz, dt::Float64; M::Int=500, lanc_m::Int=80)
 
     p = SpinParams(L, hopping, h, zz)
     states, idxmap = build_sector_basis(L, nup)
@@ -156,24 +206,12 @@ function run_chebyshev_sector(L::Int, nup::Int, hopping, h,
     ψ0 = ComplexF64.(ψ0)
     ψ0_lanczos = copy(ψ0)
 
-    # Estimate Emax
-    _, Emax = lanczos_extremal(apply_H_sector!, ψ0_lanczos, p, 
-                            m=lanc_m, states=states, idxmap= idxmap)
-
-    # Estimate Emin using -H
-    function apply_H_neg!(out, ψ, p, states, idxmap)
-        apply_H_sector!(out, ψ, p, states, idxmap)
-        @. out = -out
-    end
-    _, Emax_neg = lanczos_extremal(apply_H_neg!, ψ0_lanczos, p,  
-                                    m=lanc_m, states=states, idxmap= idxmap)
-    Emin = -Emax_neg
-
-    #@show "sector" , Emin, Emax
+    Emin, Emax = estimate_energy_bounds(apply_H_sector!, ψ0_lanczos, p; 
+                                    m=lanc_m, states=states, idxmap=idxmap)
     E_bounds = (Emin - 1e-6, Emax + 1e-6)
 
     # Time evolution
-    ψt = chebyshev_time_evolve(ψ0, t, apply_H_sector!, p,  
+    ψt = chebyshev_time_evolve(ψ0, dt, apply_H_sector!, p,  
                                 M=M, E_bounds=E_bounds, states=states, idxmap=idxmap)
 
                                   
@@ -188,7 +226,7 @@ end
 # ---------------------------------------------------------
 # High-level wrapper: Chebyshev (full Hilbert space)
 # ---------------------------------------------------------
-function run_chebyshev_full(L::Int, hopping, h, zz, t::Float64; M::Int=500, lanc_m::Int=80)
+function run_chebyshev_full(L::Int, hopping, h, zz, dt::Float64; M::Int=500, lanc_m::Int=80)
 
     p = SpinParams(L, hopping, h, zz)
     
@@ -202,22 +240,12 @@ function run_chebyshev_full(L::Int, hopping, h, zz, t::Float64; M::Int=500, lanc
 
     ψ0_lanczos = copy(ψ0)
 
-    # Estimate Emax
-    _, Emax = lanczos_extremal(apply_H_full!, ψ0_lanczos, p, m=lanc_m)
-
-    # Estimate Emin using -H
-    function apply_H_neg!(out, ψ, p)
-        apply_H_full!(out, ψ, p)
-        @. out = -out
-    end
-    _, Emax_neg = lanczos_extremal(apply_H_neg!, ψ0_lanczos, p, m=lanc_m)
-    Emin = -Emax_neg
-
-    #@show "full" , Emin, Emax
+    Emin, Emax = estimate_energy_bounds(apply_H_full!, ψ0_lanczos, p; m=lanc_m)
     E_bounds = (Emin - 1e-6, Emax + 1e-6)
 
+
     # Time evolution
-    ψt = chebyshev_time_evolve(ψ0, t, apply_H_full!, p, M=M, E_bounds=E_bounds)
+    ψt = chebyshev_time_evolve(ψ0, dt, apply_H_full!, p, M=M, E_bounds=E_bounds)
 
     # Observables
     mags = magnetization_per_site(ψt, p)

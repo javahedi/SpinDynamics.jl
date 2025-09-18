@@ -47,21 +47,22 @@ function apply_H_full!(out::AbstractVector{T}, ψ::AbstractVector{T}, p::SpinPar
         state = UInt64(idx-1)
         diag = zero(T)
         # onsite field
-        for i in 0:(L-1)
-            diag += T(onsite[i+1]*sz_value(bit_at(state,i)))
+        for i in 1:L
+            diag += T(onsite[i]*sz_value(bit_at(state,i-1)))
         end
         # ZZ terms
         for (i,j,Jz) in zz
-            diag += T(Jz*sz_value(bit_at(state,i))*sz_value(bit_at(state,j)))
+            diag += T(Jz*sz_value(bit_at(state,i-1))*sz_value(bit_at(state,j-1)))
         end
         @inbounds local_out[idx] += diag * amp
 
         # hopping terms
         for (i,j,Jxy) in hopping
-            bi, bj = bit_at(state,i), bit_at(state,j)
+            bi, bj = bit_at(state,i-1), bit_at(state,j-1)
             if bi != bj
-                newstate = flip_bits(state,i,j)
+                newstate = flip_bits(state,i-1,j-1)
                 newidx = Int(newstate)+1
+                @assert 1 <= newidx <= N "apply_H_full!: Index out of bounds: $newidx, L=$L"
                 @inbounds local_out[newidx] += T(Jxy) * amp
             end
         end
@@ -97,21 +98,23 @@ function apply_H_sector!(out::AbstractVector{T}, ψ::AbstractVector{T}, p::SpinP
         state = states[idx]
         diag = zero(T)
         # diagonal terms
-        for i in 0:L-1
-            diag += T(onsite[i+1] * sz_value(bit_at(state,i)))
+        for i in 1:L
+            diag += T(onsite[i] * sz_value(bit_at(state,i-1)))
         end
         for (i,j,Jz) in zz
-            diag += T(Jz * sz_value(bit_at(state,i)) * sz_value(bit_at(state,j)))
+            diag += T(Jz * sz_value(bit_at(state,i-1)) * sz_value(bit_at(state,j-1)))
         end
         @inbounds local_out[idx] += diag * amp
 
         # off-diagonal hopping terms
+        #Julia arrays are 1-based.
+        # Bit positions in UInt64 are 0-based
         for (i,j,Jxy) in hopping
-            bi, bj = bit_at(state,i), bit_at(state,j)
+            bi, bj = bit_at(state,i-1), bit_at(state,j-1) # Bit positions in UInt64 are 0-based
             if bi != bj
-                newstate = flip_bits(state,i,j)
+                newstate = flip_bits(state,i-1,j-1)
                 if haskey(idxmap, newstate)          # <-- safety check ,, to stay in same sector
-                    newidx = idxmap[newstate]
+                    newidx = idxmap[newstate] 
                     @inbounds local_out[newidx] += T(Jxy) * amp
                 end
             end

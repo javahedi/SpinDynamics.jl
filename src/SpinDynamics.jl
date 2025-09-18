@@ -1,14 +1,20 @@
 module SpinDynamics
 
 # Re_Export top-level things
-export  SpinParams, bit_at, sz_value, flip_bits
-export domain_wall_state_sector, domain_wall_state_full 
+export SpinParams, bit_at, sz_value, flip_bits
 export apply_H_full!, apply_H_sector!
 export build_sector_basis, build_full_basis
 export magnetization_per_site, structure_factor_Sq, connected_correlations
 export magnetization_per_site_sector, structure_factor_Sq_sector, connected_correlations_sector
 
-export chebyshev_time_evolve
+
+
+export domain_wall_state_sector, domain_wall_state_full
+export neel_state_sector, neel_state_full
+export fm_state_sector, fm_state_full
+export polarized_with_flips_sector, polarized_with_flips_full
+
+export chebyshev_time_evolve, estimate_energy_bounds
 export run_chebyshev_sector, run_chebyshev_full
 
 

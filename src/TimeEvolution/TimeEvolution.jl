@@ -2,7 +2,7 @@ module TimeEvolution
 
 
 # Re_Export
-export chebyshev_time_evolve, lanczos_extremal
+export chebyshev_time_evolve, lanczos_extremal, estimate_energy_bounds
 export run_chebyshev_full, run_chebyshev_sector
 
 
