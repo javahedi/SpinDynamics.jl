@@ -6,8 +6,8 @@ export chebyshev_time_evolve, lanczos_extremal
 export run_chebyshev_full, run_chebyshev_sector
 
 
-export krylov_time_evolve_sector, run_krylov_sector
-export krylov_time_evolve_full, run_krylov_full
+export krylov_time_evolve
+export run_krylov_sector, run_krylov_full
 
 
 # Include the engines

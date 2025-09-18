@@ -132,8 +132,8 @@ end
     states, idxmap = build_sector_basis(L, nup)
     ψ0 = domain_wall_state_sector(L, nup, states, idxmap)
     ψ0c = ComplexF64.(ψ0)
-    ψt = krylov_time_evolve_sector(ψ0c, t, apply_H_sector!, 
-                                   SpinParams(L,hopping,onsite,zz), states, idxmap)
+    ψt = krylov_time_evolve(ψ0c, t, apply_H_sector!, 
+                            SpinParams(L,hopping,onsite,zz),  m=30, states=states, idxmap=idxmap)
     @show norm(ψt)
     @show norm(ψ0c)
     @test abs(norm(ψt) - norm(ψ0c)) < tol
@@ -142,8 +142,8 @@ end
     # -----------------------------
     # 3) Krylov evolution reduces to identity at t=0
     # -----------------------------
-    ψt0 = krylov_time_evolve_sector(ψ0c, 0.0, apply_H_sector!, 
-                                    SpinParams(L,hopping,onsite,zz), states, idxmap)
+    ψt0 = krylov_time_evolve(ψ0c, 0.0, apply_H_sector!, 
+                            SpinParams(L,hopping,onsite,zz), m=30, states=states, idxmap=idxmap)
     @test all(abs.(ψt0 .- ψ0c) .< tol)
 
 end

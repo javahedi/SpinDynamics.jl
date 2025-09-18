@@ -16,23 +16,22 @@ using ...Hamiltonian
 using ...InitialStates
 using ...Observables
 
-export krylov_time_evolve_sector, run_krylov_sector
-export krylov_time_evolve_full, run_krylov_full
+export krylov_time_evolve
+export run_krylov_sector, run_krylov_full
 
 # ---------------------------------------------------------
-# Krylov time evolution (sector)
+# Krylov time evolution 
 # ---------------------------------------------------------
 """
-krylov_time_evolve_sector(ψ0, t, applyH!, p, states, idxmap; m=30)
+krylov_time_evolve(ψ0, t, applyH!, p, states, idxmap; m=30)
 
-Evolve a real sector-state vector ψ0 in time t using the Lanczos/Krylov method.
 - ψ0: Vector{ComplexF64} (sector basis)
 - applyH!: function of signature (out, vec, p, states, idxmap)
 - p: SpinParams
 - states, idxmap: sector basis info
 """
-function krylov_time_evolve_sector(ψ0::AbstractVector{T}, t::Float64,
-        applyH!, p::SpinParams, states::Vector{UInt64}, idxmap::Dict{UInt64,Int}; m::Int=30) where T<:Number
+function krylov_time_evolve(ψ0::AbstractVector{T}, t::Float64,
+        applyH!, p::SpinParams ; m::Int=30, states=nothing, idxmap=nothing) where T<:Number
 
     n = length(ψ0)
     V = Vector{Vector{T}}(undef, m)
@@ -48,7 +47,14 @@ function krylov_time_evolve_sector(ψ0::AbstractVector{T}, t::Float64,
 
     m_eff = m
     for j in 1:m
-        applyH!(w, V[j], p, states, idxmap)
+
+        if states === nothing
+            applyH!(w, V[j], p)
+        else
+            applyH!(w, V[j], p, states, idxmap)
+        end
+
+        
         α[j] = dot(V[j], w)
         w .-= α[j] .* V[j]
         if j > 1
@@ -85,6 +91,7 @@ function krylov_time_evolve_sector(ψ0::AbstractVector{T}, t::Float64,
     return ψt
 end
 
+#=
 # ---------------------------------------------------------
 # Krylov time evolution (full Hilbert space)
 # ---------------------------------------------------------
@@ -146,6 +153,8 @@ function krylov_time_evolve_full(ψ0::AbstractVector{T}, t::Float64,
     end
     return ψt
 end
+=#
+
 
 # ---------------------------------------------------------
 # High-level wrapper: Krylov (sector)
@@ -162,7 +171,7 @@ function run_krylov_sector(L::Int, nup::Int, hopping, h, zz, t::Float64; m::Int=
     ψ0 = domain_wall_state_sector(L,nup,states,idxmap)
 
     # Time evolution
-    ψt = krylov_time_evolve_sector(ComplexF64.(ψ0), t, apply_H_sector!, p, states, idxmap, m=m)
+    ψt = krylov_time_evolve(ComplexF64.(ψ0), t, apply_H_sector!, p, m=m,  states=states, idxmap=idxmap)
 
     # Observables
     mags = magnetization_per_site_sector(ψt, p, states)
@@ -186,7 +195,7 @@ function run_krylov_full(L::Int, hopping, h, zz, t::Float64; m::Int=30)
 
 
     # Time evolution
-    ψt = krylov_time_evolve_full(ψ0, t, apply_H_full!, p, m=m)
+    ψt = krylov_time_evolve(ψ0, t, apply_H_full!, p, m=m)
 
     # Observables
     mags = magnetization_per_site(ψt, p)

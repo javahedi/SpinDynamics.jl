@@ -8,12 +8,12 @@ export build_sector_basis, build_full_basis
 export magnetization_per_site, structure_factor_Sq, connected_correlations
 export magnetization_per_site_sector, structure_factor_Sq_sector, connected_correlations_sector
 
-export chebyshev_time_evolve, lanczos_extremal
+export chebyshev_time_evolve
 export run_chebyshev_sector, run_chebyshev_full
 
 
-export krylov_time_evolve_sector, run_krylov_sector
-export krylov_time_evolve_full, run_krylov_full
+export krylov_time_evolve 
+export run_krylov_sector, run_krylov_full
 
 
 
