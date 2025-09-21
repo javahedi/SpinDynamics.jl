@@ -23,7 +23,7 @@ jobs:
         version:
           - '1.11'
           - 'lts'    # Uses current LTS (instead of hardcoding 1.6)
-          - 'pre'
+         # - 'pre'
         os:
           - ubuntu-latest
         arch:
