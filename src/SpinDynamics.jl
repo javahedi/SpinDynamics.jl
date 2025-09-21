@@ -18,7 +18,7 @@ export chebyshev_time_evolve, estimate_energy_bounds
 export run_chebyshev_sector, run_chebyshev_full
 
 
-export krylov_time_evolve 
+export krylov_time_evolve!, krylov_time_evolve, KrylovWorkspace
 export run_krylov_sector, run_krylov_full
 
 

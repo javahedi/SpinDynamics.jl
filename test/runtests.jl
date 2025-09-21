@@ -144,7 +144,9 @@ end
     # 3) Krylov evolution reduces to identity at t=0
     # -----------------------------
     ψt0 = krylov_time_evolve(ψ0c, 0.0, apply_H_sector!, 
-                            SpinParams(L,hopping,onsite,zz), m=30, states=states, idxmap=idxmap)
+                            SpinParams(L,hopping,onsite,zz), m=30, 
+                            states=states, idxmap=idxmap)
+
     @test all(abs.(ψt0 .- ψ0c) .< tol)
     
 
@@ -160,8 +162,8 @@ end
 
 
    # ----------------------------- # 1) Sector vs full evolution # ----------------------------- 
-   mags_sector, Sq_sector, E_bounds= run_chebyshev_sector(L, nup, hopping, onsite, zz, dt) 
-   mags_full, Sq_full, E_bounds = run_chebyshev_full(L, hopping, onsite, zz, dt) 
+   mags_sector, Sq_sector, Ebounds_full= run_chebyshev_sector(L, nup, hopping, onsite, zz, dt) 
+   mags_full, Sq_full, Ebounds_sector = run_chebyshev_full(L, hopping, onsite, zz, dt) 
    
    
   
@@ -175,7 +177,7 @@ end
     ψ0c = ComplexF64.(ψ0)
     ψt_sector = chebyshev_time_evolve(ψ0c, dt, apply_H_sector!, 
                                       SpinParams(L, hopping, onsite, zz),
-                                      M=500, E_bounds=E_bounds,
+                                      n=50, Ebounds=Ebounds_sector, 
                                       states=states, idxmap=idxmap)
     @test abs(norm(ψt_sector) - norm(ψ0c)) < tol
 
@@ -188,8 +190,8 @@ end
     ψ0_full[Int(state_dw)+1] = 1.0 + 0im
     ψ0c_full = copy(ψ0_full)
     ψt_full = chebyshev_time_evolve(ψ0c_full, dt, apply_H_full!, 
-                                    SpinParams(L, hopping, onsite, zz),
-                                    M=500, E_bounds=E_bounds)
+                                    SpinParams(L, hopping, onsite, zz), 
+                                    n=50, Ebounds=Ebounds_full)
 
     @test abs(norm(ψt_full) - norm(ψ0c_full)) < tol
     

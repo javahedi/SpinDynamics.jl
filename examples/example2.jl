@@ -67,14 +67,12 @@ fidelities_cheb = Vector{Float64}(undef, length(ts))
 fidelities_krylov = Vector{Float64}(undef, length(ts))
 
 # -----------------------
-# Energy Bounds
-# -----------------------
-Emin, Emax = estimate_energy_bounds(apply_H_sector!, ψ0c, p; m=30, states=states, idxmap=idxmap)
-E_bounds = (Emin - 1e-8, Emax + 1e-8)
-@show E_bounds
-# -----------------------
 # Time Evolution
 # -----------------------
+
+Emin, Emax = estimate_energy_bounds(apply_H_sector!, ψ0, p; 
+                                        m=80, states=states, idxmap=idxmap)
+
 @time for (j, t) in enumerate(ts)
     # Exact
     ψt_exact = exp(-im * t * H) * ψ0c
@@ -82,7 +80,7 @@ E_bounds = (Emin - 1e-8, Emax + 1e-8)
     mags_exact[:,j] = magnetization_per_site_sector(ψt_exact, p, states)
 
     # Chebyshev
-    ψt_cheb = chebyshev_time_evolve(ψ0c, t, apply_H_sector!, p; M=200, E_bounds=E_bounds, states=states, idxmap=idxmap)
+    ψt_cheb = chebyshev_time_evolve(ψ0c, t, apply_H_sector!, p; n=50, Ebounds=(Emin, Emax), states=states, idxmap=idxmap)
     mags_cheb[:,j] = magnetization_per_site_sector(ψt_cheb, p, states)
     fidelities_cheb[j] = abs2(dot(ψt_exact, ψt_cheb))
 

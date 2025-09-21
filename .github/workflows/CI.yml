@@ -7,8 +7,6 @@ on:
   pull_request:
   workflow_dispatch:
 concurrency:
-  # Skip intermediate builds: always.
-  # Cancel intermediate builds: only if it is a pull request build.
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: ${{ startsWith(github.ref, 'refs/pull/') }}
 jobs:
@@ -16,7 +14,7 @@ jobs:
     name: Julia ${{ matrix.version }} - ${{ matrix.os }} - ${{ matrix.arch }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 60
-    permissions: # needed to allow julia-actions/cache to proactively delete old caches that it has created
+    permissions:
       actions: write
       contents: read
     strategy:
@@ -24,7 +22,7 @@ jobs:
       matrix:
         version:
           - '1.11'
-          - 'lts'
+          - 'lts'    # Uses current LTS (instead of hardcoding 1.6)
           - 'pre'
         os:
           - ubuntu-latest
@@ -32,10 +30,26 @@ jobs:
           - x64
     steps:
       - uses: actions/checkout@v4
+      
+      - name: Cache Julia dependencies
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.julia
+            /opt/hostedtoolcache/julia
+          key: ${{ runner.os }}-julia-${{ matrix.version }}-${{ matrix.arch }}-${{ hashFiles('**/Project.toml') }}-${{ hashFiles('**/Manifest.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-julia-${{ matrix.version }}-${{ matrix.arch }}-${{ hashFiles('**/Project.toml') }}-
+            ${{ runner.os }}-julia-${{ matrix.version }}-${{ matrix.arch }}-
+            ${{ runner.os }}-julia-
+      
       - uses: julia-actions/setup-julia@v2
         with:
           version: ${{ matrix.version }}
           arch: ${{ matrix.arch }}
+      
       - uses: julia-actions/cache@v2
+      
       - uses: julia-actions/julia-buildpkg@v1
+      
       - uses: julia-actions/julia-runtest@v1
