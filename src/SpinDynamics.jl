@@ -15,7 +15,7 @@ export fm_state_sector, fm_state_full
 export polarized_with_flips_sector, polarized_with_flips_full
 
 export chebyshev_time_evolve, estimate_energy_bounds
-export run_chebyshev_sector, run_chebyshev_full
+export run_chebyshev_sector, run_chebyshev_full, ChebyshevWorkspace
 
 
 export krylov_time_evolve!, krylov_time_evolve, KrylovWorkspace

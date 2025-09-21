@@ -96,7 +96,7 @@ end
 end
 
 
-
+"""
 # -------------------------
 # Chebyshev evolution
 # -------------------------
@@ -118,8 +118,39 @@ mags_cheb[:, 1] .= magnetization_per_site_sector(ψ0c, p, states)
     #ψ_tmp = chebyshev_time_evolve(ψ_tmp, t, apply_H_full!, p; n=50)
     #mags_cheb[:, j] .= magnetization_per_site(ψ_tmp, p)    
 end
+"""
 
 # -------------------------
+# Chebyshev evolution
+# -------------------------
+
+# Time evolution
+mags_cheb = Matrix{Float64}(undef, L, length(ts))
+
+# Estimate energy bounds (using the new function signature)
+Emin, Emax = estimate_energy_bounds(apply_H_sector!, ψ0c, p; 
+                                    m=80, states=states, idxmap=idxmap)
+
+# Create a workspace for repeated time evolution to avoid allocations
+workspace = ChebyshevWorkspace(ψ0c)
+
+# Initialize with first time point
+mags_cheb[:, 1] .= magnetization_per_site_sector(ψ0c, p, states)
+
+ψ_tmp = copy(ψ0c)
+
+@time for j in 1:length(ts)-1 
+    dt = ts[j+1] - ts[j]
+    global ψ_tmp
+    # Use the workspace for efficient repeated evolution
+    ψ_tmp = chebyshev_time_evolve(ψ_tmp, dt, apply_H_sector!, p;
+                                  n=10, Ebounds=(Emin, Emax), 
+                                  states=states, idxmap=idxmap,
+                                  workspace=workspace)
+    
+    mags_cheb[:, j+1] .= magnetization_per_site_sector(ψ_tmp, p, states)
+end
+#---------------------
 # Plot heatmaps
 # -------------------------
 
