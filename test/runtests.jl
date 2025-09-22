@@ -2,9 +2,12 @@
 
 using Test
 using SpinDynamics
-using LinearAlgebra
 
+include("test_SpinModel.jl")
+include("test_InitialStates.jl")
+include("test_Hamiltonian.jl")
 
+#=
 
 @testset "Basis: full Hilbert space" begin
     L = 8
@@ -157,7 +160,7 @@ end
 # -----------------------------
 # Chebyshev tests
 # -----------------------------
-@testset "Chebyshev norm preservation" begin
+@testset "Chebyshev module tests" begin
 
 
 
@@ -194,6 +197,177 @@ end
                                     n=50, Ebounds=Ebounds_full)
 
     @test abs(norm(ψt_full) - norm(ψ0c_full)) < tol
+
+end
+
+
+# -----------------------------
+# KPM module tests
+# -----------------------------
+@testset "KPM module tests" begin
+    
+    ω_range = range(-4.0, 4.0, length=50)
+
+    # Test 1: Basic functionality - Sz-Sz correlation
+    @testset "Sz-Sz correlation" begin
+
+        # Should not throw errors
+        S_ω = run_kpm_dynamical_sector(L, nup, hopping, onsite, zz, 
+                                        ω_range; opA_type_a=:z, opB_type_b=:z, n=100)
+        
+        # Basic checks
+    
+        @test all(isfinite.(S_ω))
+        @test all(S_ω .>= 0.0)  # Spectral function should be non-negative
+        @test maximum(S_ω) > 0.0  # Should have some spectral weight
+
+        println("Sz-Sz correlation test passed: spectrum has $(sum(S_ω)/length(S_ω)) total weight")
+    end
+
+
+    # Test 2: S⁺-S⁻ correlation,,, must be done in full space
+    @testset "S⁺-S⁻ correlation" begin
+       
+        run_kpm_dynamical_full(::Int64, ::Int64, ::Vector{Tuple{Int64, Int64, Float64}}, 
+        ::Vector{Float64}, ::Vector{Tuple{Int64, Int64, Float64}}, 
+        ::StepRangeLen{Float64, Base.TwicePrecision{Float64},
+         Base.TwicePrecision{Float64}, Int64}; opA_type_a::Symbol, 
+         opB_type_b::Symbol, n::Int64)
+
+        S_ω = run_kpm_dynamical_full(L, nup, hopping, onsite, zz, ω_range; 
+        opA_type_a=:plus, opB_type_b=:plus, n=100)
+
+        @test all(isfinite.(S_ω))
+        @test all(S_ω .>= 0.0)  # Spectral function should be non-negative
+        @test maximum(S_ω) > 0.0  # Should have some spectral weight
+
+        println("S⁺-S⁻ correlation test passed: spectrum has $(sum(S_ω)/length(S_ω)) total weight")
+    end
+    #=
+    # Test 3: Reusable correlation functions
+    @testset "Reusable correlation functions" begin
+        L = 6
+        nup = 3
+        ω_range = range(-4.0, 4.0, length=30)
+        
+        # Create test system
+        p = SpinParams(L, [(1,2,1.0)], zeros(L), [(1,2,0.5)])
+        states, idxmap = build_sector_basis(L, nup)
+        ψ_gs = domain_wall_state_sector(L, nup, states, idxmap)
+        ψ_gs = ComplexF64.(ψ_gs)
+        ψ_gs ./= norm(ψ_gs)
+        
+        # Create reusable functions
+        sz1_sz2_correlation = create_dynamical_correlation_function(:z, 1, :z, 2)
+        splus_sminus_correlation = create_dynamical_correlation_function(:plus, 1, :minus, 1)
+        
+        # Test they work
+        ω1, result1 = sz1_sz2_correlation(ψ_gs, ω_range, p; n=80, states=states, idxmap=idxmap)
+        ω2, result2 = splus_sminus_correlation(ψ_gs, ω_range, p; n=80, states=states, idxmap=idxmap)
+        
+        @test ω1 == ω_range
+        @test ω2 == ω_range
+        @test all(isfinite.(result1))
+        @test all(isfinite.(result2))
+        
+        println("Reusable correlation functions test passed")
+    end
+    
+    # Test 4: Operator creation
+    @testset "Operator creation" begin
+        L = 4
+        nup = 2
+        states, idxmap = build_sector_basis(L, nup)
+        ψ_test = ones(ComplexF64, length(states))
+        ψ_test ./= norm(ψ_test)
+        p = SpinParams(L, [(1,2,1.0)], zeros(L), [(1,2,0.5)])
+        
+        # Test all operator types
+        operators = [
+            create_spin_operator(1, :z),
+            create_spin_operator(1, :plus),
+            create_spin_operator(1, :minus),
+            create_spin_operator(1, :x),
+            create_spin_operator(1, :y)
+        ]
+        
+        for op in operators
+            result = op(ψ_test, p, states, idxmap)
+            @test length(result) == length(ψ_test)
+            @test all(isfinite.(result))
+        end
+        
+        println("Operator creation test passed: all operator types work correctly")
+    end
+    
+    # Test 5: Error handling
+    @testset "Error handling" begin
+        # Test invalid operator type
+        @test_throws ArgumentError create_spin_operator(1, :invalid)
+        
+        # Test out of bounds site
+        @test_throws BoundsError create_spin_operator(100, :z)
+        
+        println("Error handling test passed")
+    end
+    
+    # Test 6: Consistency checks
+    @testset "Consistency checks" begin
+        L = 4
+        nup = 2
+        ω_range = range(-3.0, 3.0, length=20)
+        
+        # Test that same-site Sz-Sz gives reasonable results
+        ω1, S1 = run_kpm_dynamical_sector(L=L, nup=nup, hopping=1.0, h=0.0, zz=0.5,
+                                        ω_range=ω_range, opA_site=1, opB_site=1, n=80)
+        
+        # Should be mostly positive with some structure
+        @test maximum(S1) > 0.0
+        @test sum(S1) > 0.0
+        
+        println("Consistency checks passed: same-site correlation has $(sum(S1)) total weight")
+    end
+    
+    # Test 7: Full Hilbert space (small system)
+    @testset "Full Hilbert space" begin
+        L = 4  # Small system for full Hilbert space test
+        ω_range = range(-3.0, 3.0, length=20)
+        
+        ω, S_ω = run_kpm_dynamical_full(L=L, hopping=1.0, h=0.0, zz=0.5,
+                                      ω_range=ω_range, opA_site=1, opB_site=2, n=80)
+        
+        @test length(ω) == length(S_ω)
+        @test all(isfinite.(S_ω))
+        @test maximum(S_ω) > 0.0
+        
+        println("Full Hilbert space test passed")
+    end
+    
+    # Test 8: Kernel functions
+    @testset "Kernel functions" begin
+        # Test Jackson kernel
+        n = 10
+        kernel = get_jackson_kernel(n)
+        @test length(kernel) == n
+        @test all(0.0 .<= kernel .<= 1.0)
+        @test kernel[1] ≈ 1.0 atol=1e-10  # First coefficient should be 1
+        
+        # Test Chebyshev series evaluation
+        μ_n = zeros(5)
+        μ_n[1] = 1.0  # Only constant term
+        result = evaluate_chebyshev_series(μ_n, 0.5, 1.0)
+        @test isfinite(result)
+        
+        # Test edge case
+        edge_result = evaluate_chebyshev_series(μ_n, 1.1, 1.0)
+        @test edge_result == 0.0  # Should be zero outside domain
+        
+        println("Kernel functions test passed")
+    end
+    
+    println("All KPM tests completed successfully!")
+    =#
     
 end
 
+=#

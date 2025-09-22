@@ -1,46 +1,47 @@
 module Basis
 
-# Exported functions
-export build_full_basis, build_sector_basis
-using Combinatorics
+    using Combinatorics
+
+    
+    export build_full_basis, build_sector_basis
 
 
 
-
-"""
-    build_full_basis(L::Int)
-
-Constructs the full Hilbert space basis for L spins.
-Returns:
-- states::Vector{UInt64}: list of all basis states as bitstrings
-- idxmap::Dict{UInt64,Int}: mapping from bitstring to index
-"""
-function build_full_basis(L::Int)
-    N = 1 << L  # 2^L states
-    states = [UInt64(i-1) for i in 1:N]
-    idxmap = Dict(s => i for (i,s) in enumerate(states))
-    return states, idxmap
-end
-
-"""
-    build_sector_basis(L::Int, nup::Int)
-
-Constructs the Hilbert space restricted to total Sz = nup - (L-nup)/2.
-Returns:
-- states::Vector{UInt64}: list of bitstrings in the sector
-- idxmap::Dict{UInt64,Int}: mapping from bitstring to index
-"""
-function build_sector_basis(L::Int, nup::Int)
-    states = UInt64[]
-    for comb in combinations(0:L-1, nup)
-        s = UInt64(0)
-        for i in comb
-            s |= UInt64(1)<<i
+    # Full basis: all 2^L states
+    function build_full_basis(L::Int)
+        N = 1 << L
+        states = Vector{UInt64}(undef, N)
+        idxmap = Dict{UInt64, Int}()
+        @inbounds for i in 0:N-1
+            s = UInt64(i)
+            states[i+1] = s
+            idxmap[s] = i+1
         end
-        push!(states, s)
+        return states, idxmap
     end
-    idxmap = Dict(s => i for (i,s) in enumerate(states))
-    return states, idxmap
-end
+
+    # Sector basis: all states with exactly nup up-spins
+    function build_sector_basis(L::Int, nup::Int)
+        states = UInt64[]
+        sizehint!(states, binomial(L, nup))
+        for comb in combinations(1:L, nup)
+            s = UInt64(0)
+            for i in comb
+                s |= UInt64(1) << (i-1)
+            end
+            push!(states, s)
+        end
+        idxmap = Dict{UInt64, Int}()
+        for (i, s) in enumerate(states)
+            idxmap[s] = i
+        end
+        return states, idxmap
+    end
+
+    # bit access
+    @inline function bit_at(state::UInt64, i::Int)
+        return (state >> i) & 0x1
+    end
+
 
 end # module

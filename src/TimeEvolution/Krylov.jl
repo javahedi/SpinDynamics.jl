@@ -10,13 +10,14 @@ module Krylov
 
     using LinearAlgebra
     # import sibling modules from parent (SpinDynamics)
+    using ...SpinModel
     using ...Basis
     using ...Hamiltonian
     using ...InitialStates
     using ...Observables
 
     export krylov_time_evolve!, krylov_time_evolve
-    export run_krylov_sector, run_krylov_full, KrylovWorkspace
+    export run_krylov, KrylovWorkspace
 
     # ---------------------------------------------------------
     # Krylov time evolution 
@@ -38,17 +39,29 @@ module Krylov
         return KrylovWorkspace(V, α, β, w, e1)
     end
 
+
+    """
+        krylov_time_evolve!(ψ_out, ψ_in, dt, applyH!, model, ws; m=30)
+    Advance the state vector `ψ_in` by time `dt` using Krylov–Lanczos time evolution,
+    writing the result into `ψ_out`.
+
+    - `ψ_out`, `ψ_in` are `Vector{ComplexF64}` of length N
+    - `applyH!(out, vec, model)` applies H·vec into out
+    - `model`: SpinModel.Model
+    - `ws`: KrylovWorkspace (preallocated)
+    - `m`: Krylov subspace dimension
+
+    """
     function krylov_time_evolve!(ψ_out::Vector{ComplexF64},
                                 ψ_in::Vector{ComplexF64},
                                 dt::Float64,
-                                applyH!, p,
+                                applyH!, model::SpinModel.Model,
                                 ws::KrylovWorkspace;
-                                m::Int=30,
-                                states=nothing, idxmap=nothing)
+                                kry_m::Int=30)
 
         n = length(ψ_in)
         @assert length(ψ_out) == n
-        @assert length(ws.V) ≥ m
+        @assert length(ws.V) ≥ kry_m
 
         V, α, β, w, e1 = ws.V, ws.α, ws.β, ws.w, ws.e1
 
@@ -62,13 +75,11 @@ module Krylov
         copyto!(V[1], ψ_in)
         V[1] ./= norm0
 
-        m_eff = m
-        for j in 1:m
-            if states === nothing
-                applyH!(w, V[j], p)
-            else
-                applyH!(w, V[j], p, states, idxmap)
-            end
+        m_eff = kry_m
+        for j in 1:kry_m
+           
+            applyH!(w, V[j], model)
+            
 
             α[j] = dot(V[j], w)
             w .-= α[j] .* V[j]
@@ -76,7 +87,7 @@ module Krylov
                 w .-= β[j-1] .* V[j-1]
             end
 
-            if j < m
+            if j < kry_m
                 β[j] = norm(w)
                 if abs(β[j]) < 1e-14
                     m_eff = j
@@ -110,12 +121,11 @@ module Krylov
     
     
     """
-        krylov_time_evolve(ψ0, t, applyH!, p, states, idxmap; m=30)
+        krylov_time_evolve(ψ0, t, applyH!, model::SpinModel.Model; m=30)
 
         - ψ0: Vector{ComplexF64} (sector basis)
         - applyH!: function of signature (out, vec, p, states, idxmap)
-        - p: SpinParams
-        - states, idxmap: sector basis info
+        - model: SpinModel.Model
 
         NOTE: 
         If dt is fixed → you can precompute Q, D once and reuse.
@@ -124,13 +134,12 @@ module Krylov
         
         """
     function krylov_time_evolve(ψ0::AbstractVector{T}, dt::Float64,
-                applyH!, p::SpinParams ; m::Int=30, 
-                states=nothing, idxmap=nothing) where T<:Number
+                applyH!, model::SpinModel.Model; kry_m::Int=30) where T<:Number
 
             n = length(ψ0)
-            V = Vector{Vector{T}}(undef, m)
-            α = zeros(ComplexF64, m)  # CHANGED: Use ComplexF64
-            β = zeros(ComplexF64, m-1)  # CHANGED: Use ComplexF64
+            V = Vector{Vector{T}}(undef, kry_m)
+            α = zeros(ComplexF64, kry_m)  # CHANGED: Use ComplexF64
+            β = zeros(ComplexF64, kry_m-1)  # CHANGED: Use ComplexF64
             w = zeros(T, n)
 
             norm0 = norm(ψ0)
@@ -139,20 +148,16 @@ module Krylov
             end
             V[1] = copy(ψ0) / norm0
 
-            m_eff = m
-            for j in 1:m
-                if states === nothing
-                    applyH!(w, V[j], p)
-                else
-                    applyH!(w, V[j], p, states, idxmap)
-                end
+            m_eff = kry_m
+            for j in 1:kry_m
+                applyH!(w, V[j], model)
 
                 α[j] = dot(V[j], w)  # CHANGED: Use full complex dot product
                 w .-= α[j] .* V[j]
                 if j > 1
                     w .-= β[j-1] .* V[j-1]
                 end
-                if j < m
+                if j < kry_m
                     β[j] = norm(w)
                     if abs(β[j]) < 1e-14
                         m_eff = j
@@ -187,141 +192,29 @@ module Krylov
     end
     
 
-    
-    
-    #=
-    """
-        krylov_time_evolve!(ψ_out, ψ_in, dt, applyH!, p;
-                            m=30, states=nothing, idxmap=nothing)
-
-    Advance the state vector `ψ_in` by time `dt` using Krylov–Lanczos time evolution,
-    writing the result into `ψ_out`.
-
-    - `ψ_out`, `ψ_in` are `Vector{ComplexF64}` of length N
-    - `applyH!(out, vec, p, ...)` applies H·vec into out
-    - `m`: Krylov subspace dimension
-    """
-    function krylov_time_evolve!(ψ_out::AbstractVector{ComplexF64},
-                                ψ_in::AbstractVector{ComplexF64},
-                                dt::Float64,
-                                applyH!, p; m::Int=30,
-                                states=nothing, idxmap=nothing)
-
-        n = length(ψ_in)
-
-        # Krylov basis storage (preallocated each call)
-        V = Vector{Vector{ComplexF64}}(undef, m)
-        α = zeros(Float64, m)
-        β = zeros(Float64, m-1)
-        w = zeros(ComplexF64, n)
-
-
-
-        # Normalize initial vector
-        norm0 = norm(ψ_in)
-        if norm0 == 0
-            copyto!(ψ_out, ψ_in)
-            return ψ_out
-        end
-        V[1] = copy(ψ_in) / norm0
-
-        m_eff = m
-        for j in 1:m
-            if states === nothing
-                applyH!(w, V[j], p)
-            else
-                applyH!(w, V[j], p, states, idxmap)
-            end
-
-            α[j] = real(dot(V[j], w))
-            w .-= α[j] .* V[j]
-            if j > 1
-                w .-= β[j-1] .* V[j-1]
-            end
-
-            if j < m
-                β[j] = norm(w)
-                if β[j] < 1e-14
-                    m_eff = j
-                    α = α[1:m_eff]
-                    β = β[1:(m_eff-1)]
-                    V = V[1:m_eff]
-                    break
-                end
-                V[j+1] = copy(w / β[j])
-            end
-        end
-
-        # Build reduced tridiagonal and exponentiate
-        TR = SymTridiagonal(α[1:m_eff], β[1:(m_eff-1)])
-        eig = eigen(Matrix(TR))  # Convert to matrix for complex eigen
-        D, Q = eig.values, eig.vectors
-
-        U_T = Q * Diagonal(exp.(-1im .* D .* dt)) * Q'
-        e1 = zeros(ComplexF64, m_eff); e1[1] = norm0
-        y = U_T * e1
-
-        # Reconstruct ψ_out
-        fill!(ψ_out, 0)
-        for k in 1:m_eff
-            @. ψ_out += y[k] * V[k]
-        end
-
-        ψ_out ./= norm(ψ_out)
-        return nothing
-    end
-    =#
-
-
-
-
 
     # ---------------------------------------------------------
     # High-level wrapper: Krylov (sector)
     # ---------------------------------------------------------
     """
-    run_krylov_sector(L, nup, hopping, h, zz, t; m=30)
+    run_krylov(model::SpinModel.Model; m=30)
 
     Builds sector basis, domain-wall initial state, runs Krylov evolution and returns observables.
     """
-    function run_krylov_sector(L::Int, nup::Int, hopping, h, zz, dt::Float64; m::Int=30)
+    function run_krylov(model::SpinModel.Model, dt::Float64; kry_m::Int=30)
 
-        p = SpinParams(L,hopping,h,zz)
-        states, idxmap = build_sector_basis(L,nup)
-        ψ0 = domain_wall_state_sector(L,nup,states,idxmap)
+      
+        ψ0 = domain_wall_state(model)
 
         # Time evolution
-        ψt = krylov_time_evolve(ComplexF64.(ψ0), dt, apply_H_sector!, 
-                                p, m=m,  states=states, idxmap=idxmap)
+        ψt = krylov_time_evolve(ComplexF64.(ψ0), dt, apply_H!, model, kry_m=kry_m)
+
 
         # Observables
-        mags = magnetization_per_site_sector(ψt, p, states)
-        Sq   = structure_factor_Sq_sector(ψt, p, states)
+        mags = magnetization_per_site_sector(ψt, model)
+        Sq   = structure_factor_Sq_sector(ψt, model)
         return mags, Sq
     end
 
-    # ---------------------------------------------------------
-    # High-level wrapper: Krylov (full Hilbert space)
-    # ---------------------------------------------------------
-    function run_krylov_full(L::Int, hopping, h, zz, dt::Float64; m::Int=30)
-
-        p = SpinParams(L,hopping,h,zz)
-        N = 1<<L
-        #ψ0 = zeros(ComplexF64, N)
-        #ψ0[1] = 1.0 + 0im  # dN = 2^L, so idx = 1 corresponds to |000…0⟩ (all spins down) in your binary-to-UInt64 mapping
-        state_dw = domain_wall_state_full(L)
-        idx_dw = Int(state_dw) + 1   # because you index states 0-based -> 1-based Julia array
-        ψ0 = zeros(ComplexF64, N)
-        ψ0[idx_dw] = 1.0 + 0im
-
-
-        # Time evolution
-        ψt = krylov_time_evolve(ψ0, dt, apply_H_full!, p, m=m)
-
-        # Observables
-        mags = magnetization_per_site(ψt, p)
-        Sq   = structure_factor_Sq(ψt, p)
-        return mags, Sq
-    end
-
+    
 end # module

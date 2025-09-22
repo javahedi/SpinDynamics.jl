@@ -1,41 +1,46 @@
 module SpinDynamics
 
-# Re_Export top-level things
-export SpinParams, bit_at, sz_value, flip_bits
-export apply_H_full!, apply_H_sector!
-export build_sector_basis, build_full_basis
-export magnetization_per_site, structure_factor_Sq, connected_correlations
-export magnetization_per_site_sector, structure_factor_Sq_sector, connected_correlations_sector
 
 
-
-export domain_wall_state_sector, domain_wall_state_full
-export neel_state_sector, neel_state_full
-export fm_state_sector, fm_state_full
-export polarized_with_flips_sector, polarized_with_flips_full
-
-export chebyshev_time_evolve, estimate_energy_bounds
-export run_chebyshev_sector, run_chebyshev_full, ChebyshevWorkspace
+    include("Basis.jl")
+    using .Basis
+    export build_full_basis, build_sector_basis
 
 
-export krylov_time_evolve!, krylov_time_evolve, KrylovWorkspace
-export run_krylov_sector, run_krylov_full
+    include("SpinModel.jl")
+    using .SpinModel
+    export Model, build_model, nn_hopping, long_range_hopping
 
 
+    include("Hamiltonian.jl")
+    using .Hamiltonian
+    export apply_H!, bit_at, sz_value, flip_bits, create_spin_operator
 
-export TimeEvolution  # <--- make submodule visible
+    include("InitialStates.jl")
+    using .InitialStates
+    export domain_wall_state, neel_state, polarized_state, polarized_state_with_flips
+            
 
-# Include modules
-include("Basis.jl")
-include("Hamiltonian.jl")
-include("InitialStates.jl")
-include("Observables.jl")
-include("TimeEvolution/TimeEvolution.jl")
 
-using .Basis
-using .Hamiltonian
-using .InitialStates
-using .Observables
-using .TimeEvolution
+    include("Observables.jl")
+    using .Observables
+    export magnetization_per_site, structure_factor_Sq, connected_correlations
+            
+            
+
+
+    include("TimeEvolution/TimeEvolution.jl")
+    using .TimeEvolution
+    export TimeEvolution 
+
+
+    export chebyshev_time_evolve, estimate_energy_bounds,
+        run_chebyshev, ChebyshevWorkspace, apply_rescaled_H!
+
+
+    export krylov_time_evolve!, krylov_time_evolve, KrylovWorkspace, run_krylov
+
+    export kpm_dynamical_correlation, kpm_dynamical_correlation_matrix, run_kpm_dynamical
+
 
 end
