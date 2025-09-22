@@ -8,7 +8,7 @@ using Plots
 # System Setup
 # -----------------------
 L = 14
-nup = 7
+nup = 12
 
 
 model_nn = build_model(L; nup=nup, hopping=nn_hopping(L,1.0), onsite_field=zeros(L), zz=nn_hopping(L,0.5))
@@ -16,9 +16,9 @@ model_nn = build_model(L; nup=nup, hopping=nn_hopping(L,1.0), onsite_field=zeros
 
 
 middle_site = ceil(Int, L/2)
-#ψ0 = polarized_state_with_flips(model_nn, [1,L])
+ψ0 = polarized_state_with_flips(model_nn, [1,L])
 #ψ0 = domain_wall_state(model_nn)
-ψ0 = neel_state(model_nn)
+#ψ0 = neel_state(model_nn)
 ψ0c = ComplexF64.(ψ0)
 
 
@@ -30,8 +30,10 @@ N = length(model_nn.states)
 H = zeros(ComplexF64, N, N)
 for i in 1:N
     ψ_tmp = zeros(ComplexF64, N)
-    ψ_tmp[i] = 1.0  # Set i-th basis state
-    apply_H!(H[:,i], ψ_tmp, model_nn)
+    ψ_tmp[i] = 1.0
+    col = zeros(ComplexF64, N)
+    apply_H!(col, ψ_tmp, model_nn)
+    H[:,i] .= col
 end
 H_ψ0 = H * ψ0c
 # -----------------------
