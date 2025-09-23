@@ -48,7 +48,7 @@ fidelities_krylov = Vector{Float64}(undef, length(ts))
 
 
 
-Emin, Emax = estimate_energy_bounds(apply_H!, length(ψ0c), model_nn; lanc_m=80)
+Emin, Emax = estimate_energy_bounds(applyH!, model_nn; lanc_m=80)
 
 #=----------------------
 @time for (j, t) in enumerate(ts)
@@ -79,6 +79,7 @@ mags_cheb[:,1] = mags_exact[:,1]
 mags_krylov[:,1] = mags_exact[:,1]
 fidelities_cheb[1] = 1.0
 fidelities_krylov[1] = 1.0 
+
 
 dt = ts[2] - ts[1]
 expH = exp(-im * dt * H)

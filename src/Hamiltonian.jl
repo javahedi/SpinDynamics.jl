@@ -1,8 +1,9 @@
 module Hamiltonian
 
 
-    export apply_H!
-    export bit_at, sz_value, flip_bits, create_spin_operator
+    export apply_H!, apply_rescaled_H!
+    
+    export bit_at, sz_value, flip_bits, create_spin_operator, Sz_q_vector
 
     using ..SpinModel
     
@@ -180,6 +181,56 @@ module Hamiltonian
         end
         
         return out
+    end
+
+
+
+
+    """
+        apply_rescaled_H!(out, ψ, applyH!, model, idxmap, a, b)
+
+    Compute out .= (Hψ - b*ψ) / a, where Hψ is written by applyH!(out, ψ, p[, states, idxmap]).
+    - `out` and `ψ` must be preallocated and have the same length.
+    - This function performs all operations in-place and avoids temporaries.
+    Returns `out`.
+    """
+    function apply_rescaled_H!(out::AbstractVector{T}, ψ::AbstractVector{T},
+                            applyH!, model::SpinModel.Model, 
+                            a::Float64, b::Float64) where T<:Number
+        @assert length(out) == length(ψ)
+        
+        # Fill out with H * ψ via the user-provided applyH!
+        applyH!(out, ψ, model)
+        
+        
+        # In-place rescaling: out = (out - b * ψ) / a
+        @inbounds for i in eachindex(out)
+            out[i] = (out[i] - b * ψ[i]) / a
+        end
+        
+        return out
+    end
+
+
+      # ------------------------------
+    # Build S_q^z |psi0> vector (phi)
+    # ------------------------------
+    function Sz_q_vector(model::SpinModel.Model, psi0::AbstractVector{T}, 
+                        q::Float64) where T<:Number
+        L = model.L
+        normfact = 1/sqrt(L)
+        phi = zeros(ComplexF64, length(psi0))
+
+        # Precompute phase factors
+        phases = exp.(im * q * (0:L-1))
+
+        # Parallelize over sites
+        @threads for r in 1:L
+            tmp = create_spin_operator(r, :z)(psi0, model)
+            @inbounds phi .+= normfact * phases[r] * ComplexF64.(tmp)
+        end
+
+        return phi
     end
 
 

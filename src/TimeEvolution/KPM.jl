@@ -26,15 +26,14 @@ module KPM
                         # magnetization_per_site, structure_factor_Sq
     using ..Chebyshev #: apply_rescaled_H!, estimate_energy_bounds  # Reuse existing functionality
     using ...InitialStates#: domain_wall_state_sector, domain_wall_state_full
+    
     export kpm_dynamical_correlation, kpm_dynamical_correlation_matrix,
-            run_kpm_dynamical
+            run_kpm_dynamical, kpm_correlation_matrix, Sqω
 
 
     # -------------------------------------------------------------------
     # KPM for T=0 Dynamical Correlation Functions
     # -------------------------------------------------------------------
-
-
 
   
     """
@@ -42,9 +41,9 @@ module KPM
     Estimate the rescaling parameters a,b to map H to Ḣ = (H - b)/a in [-1,1].
     Uses Lanczos to estimate the extremal eigenvalues of H.
     """
-    function get_rescaling_params(N::Int, apply_H!, model::SpinModel.Model; lanc_m::Int=80)
-        E_min, E_max = estimate_energy_bounds(apply_H!, N, model; lanc_m=lanc_m)
-        a = (E_max - E_min) / 2 * 0.99
+    function get_rescaling_params(apply_H!, model::SpinModel.Model; lanc_m::Int=80)
+        E_min, E_max = estimate_energy_bounds(apply_H!, model; lanc_m=lanc_m)
+        a = (E_max - E_min) / 2 * 0.9
         b = (E_max + E_min) / 2
         return a, b
     end
@@ -68,17 +67,18 @@ module KPM
     - ϵ: small broadening parameter
 
     Returns:
-    - ω_range, S_ω
+    - S_ω
     """
     function kpm_dynamical_correlation(ψ::AbstractVector{T}, operator_A, operator_B,
-                                    ω_range::AbstractVector{Float64}, applyH!, model::SpinModel.Model;
+                                    ω_range::AbstractVector{Float64}, 
+                                    applyH!, model::SpinModel.Model;
                                     n::Int=300, ϵ::Float64=0.1,
                                     a::Union{Nothing,Float64}=nothing,
                                     b::Union{Nothing,Float64}=nothing) where T<:Number
 
         # 1. If a,b not provided, compute them
         if a === nothing || b === nothing
-            a, b = get_rescaling_params(length(ψ), applyH!, model; lanc_m=n)
+            a, b = get_rescaling_params(applyH!, model; lanc_m=n)
         end
 
         # 2. Apply operator B to the ground state: |ϕ⟩ = B |ψ⟩
@@ -102,6 +102,7 @@ module KPM
         for (i, ω) in enumerate(ω_range)
             # Rescale energy
             x = (ω - b) / a
+            
             # Evaluate the Chebyshev series
             S_ω[i] = evaluate_chebyshev_series(μ_n, x, a)
         end
@@ -218,7 +219,7 @@ module KPM
         C = zeros(Float64, N, N, length(ω_range))
 
         # compute rescaling params ONCE
-        a, b = get_rescaling_params(length(ψ), applyH!, model)
+        a, b = get_rescaling_params(applyH!, model)
 
         for i in 1:N, j in 1:N
             opA = create_spin_operator(i, opA_type_a)

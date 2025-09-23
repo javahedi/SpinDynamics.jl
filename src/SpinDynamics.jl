@@ -11,10 +11,18 @@ module SpinDynamics
     using .SpinModel
     export Model, build_model, nn_hopping, long_range_hopping
 
-
     include("Hamiltonian.jl")
     using .Hamiltonian
-    export apply_H!, bit_at, sz_value, flip_bits, create_spin_operator
+    export apply_H!, apply_rescaled_H!, 
+           bit_at, sz_value, flip_bits, create_spin_operator, Sz_q_vector
+
+    include("Lanczos.jl")
+    using .Lanczos
+    export lanczos_extremal, lanczos_groundstate, 
+           lanczos_tridiag, estimate_energy_bounds
+
+    
+  
 
     include("InitialStates.jl")
     using .InitialStates
@@ -26,7 +34,17 @@ module SpinDynamics
     using .Observables
     export magnetization_per_site, structure_factor_Sq, connected_correlations
             
-            
+
+
+    include("LanczosSqw.jl")
+    using .LanczosSqw
+    export lanczos_sqw
+
+    include("KPM_Sqw.jl")
+    using .KPM_Sqw
+    export kpm_sqw
+
+    
 
 
     include("TimeEvolution/TimeEvolution.jl")
@@ -35,12 +53,12 @@ module SpinDynamics
 
 
     export chebyshev_time_evolve, estimate_energy_bounds,
-        run_chebyshev, ChebyshevWorkspace, apply_rescaled_H!
-
+            run_chebyshev, ChebyshevWorkspace
 
     export krylov_time_evolve!, krylov_time_evolve, KrylovWorkspace, run_krylov
 
-    export kpm_dynamical_correlation, kpm_dynamical_correlation_matrix, run_kpm_dynamical
+    export kpm_dynamical_correlation, kpm_dynamical_correlation_matrix, 
+            run_kpm_dynamical, kpm_correlation_matrix, Sqω
 
 
 end
