@@ -3,6 +3,8 @@
 [![Build Status](https://github.com/javahedi/SpinDynamics.jl/actions/workflows/CI.yml/badge.svg?branch=main)](https://github.com/javahedi/SpinDynamics.jl/actions/workflows/CI.yml?query=branch%3Amain)
 
 
+![SpinDynamics Logo](assets/logo.png)
+
 SpinDynamics is a Julia package for simulating quantum spin systems, computing dynamical correlation functions, and analyzing spectral properties using both **full Hilbert space** and **symmetry-adapted subspaces**. The package implements **on-the-fly Hamiltonian construction**, exploiting lattice symmetries such as U(1) to reduce computational cost.
 
 ---
