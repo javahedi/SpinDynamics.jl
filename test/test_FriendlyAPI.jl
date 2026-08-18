@@ -35,3 +35,19 @@ end
     @test length(q) == 6
     @test q ≈ 2π .* (0:5) ./ 6
 end
+
+
+@testset "Friendly API: groundstate" begin
+    model = XXZChain(2; Jxy=1.0, Jz=1.0, nup=1)
+
+    E0, ψ0 = groundstate(model; lanc_m=2)
+
+    @test E0 ≈ -0.75 atol=1e-12
+    @test norm(ψ0) ≈ 1.0 atol=1e-12
+
+    Hψ = similar(ψ0)
+    apply_H!(Hψ, ψ0, model)
+
+    @test norm(Hψ - E0 * ψ0) < 1e-10
+    @test_throws ArgumentError groundstate(model; method=:unknown)
+end
