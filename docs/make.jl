@@ -15,5 +15,10 @@ makedocs(
         "API" => "api.md",
         "Internals" => "internals.md",
     ],
+    
 )
 
+deploydocs(
+    repo = "github.com/javahedi/SpinDynamics.jl.git",
+    devbranch = "main",
+)
