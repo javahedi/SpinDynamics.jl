@@ -63,7 +63,7 @@ module SpinDynamics
 
     include("FriendlyAPI.jl")
     using .FriendlyAPI
-   export groundstate
+    export groundstate, time_evolve
 
 
 end

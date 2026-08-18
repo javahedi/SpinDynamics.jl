@@ -3,8 +3,11 @@ module FriendlyAPI
 using ..SpinModel
 using ..Hamiltonian
 using ..Lanczos
+using ..TimeEvolution
+
 
 export groundstate
+export groundstate, time_evolve
 
 """
     groundstate(model; method=:lanczos, kwargs...)
@@ -24,6 +27,38 @@ function groundstate(model::SpinModel.Model; method::Symbol=:lanczos, kwargs...)
     end
 
     throw(ArgumentError("unsupported ground-state method: $method"))
+end
+
+
+
+
+
+"""
+    time_evolve(model, ψ0, t; method=:krylov, kwargs...)
+
+Evolve a state by time `t`.
+
+Currently supported methods:
+- `:krylov`
+"""
+function time_evolve(
+    model::SpinModel.Model,
+    ψ0::AbstractVector,
+    t::Real;
+    method::Symbol=:krylov,
+    kwargs...
+)
+    if method === :krylov
+        return TimeEvolution.krylov_time_evolve(
+            ψ0,
+            Float64(t),
+            Hamiltonian.apply_H!,
+            model;
+            kwargs...
+        )
+    end
+
+    throw(ArgumentError("unsupported time-evolution method: $method"))
 end
 
 end

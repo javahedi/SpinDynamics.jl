@@ -51,3 +51,43 @@ end
     @test norm(Hψ - E0 * ψ0) < 1e-10
     @test_throws ArgumentError groundstate(model; method=:unknown)
 end
+
+
+@testset "Friendly API: time_evolve with Krylov" begin
+    model = XXZChain(2; Jxy=1.0, Jz=1.0, nup=1)
+
+    H = [-0.25 0.5;
+          0.5 -0.25]
+
+    ψ0 = ComplexF64[1.0, 0.0]
+    t = 0.3
+
+    ψ_exact = exp(-1im * t * H) * ψ0
+    ψ_krylov = time_evolve(
+        model,
+        ψ0,
+        t;
+        method=:krylov,
+        kry_m=2,
+    )
+
+    @test ψ_krylov ≈ ψ_exact atol=1e-10
+    @test norm(ψ_krylov) ≈ 1.0 atol=1e-12
+
+    ψ_t0 = time_evolve(
+        model,
+        ψ0,
+        0.0;
+        method=:krylov,
+        kry_m=2,
+    )
+
+    @test ψ_t0 ≈ ψ0 atol=1e-12
+
+    @test_throws ArgumentError time_evolve(
+        model,
+        ψ0,
+        t;
+        method=:unknown,
+    )
+end
