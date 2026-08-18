@@ -1,6 +1,8 @@
 # SpinDynamics.jl
 
+
 [![Build Status](https://github.com/javahedi/SpinDynamics.jl/actions/workflows/CI.yml/badge.svg?branch=main)](https://github.com/javahedi/SpinDynamics.jl/actions/workflows/CI.yml?query=branch%3Amain)
+[![Documentation](https://img.shields.io/badge/docs-dev-blue.svg)](https://javahedi.github.io/SpinDynamics.jl/dev/)
 
 <p align="center">
   <img src="docs/src/assets/lanczos_xxz_spectra_L20_Sz0.png"
@@ -71,14 +73,12 @@ Real-time evolution uses the same high-level interface:
 ψt = time_evolve(model, ψ0, 0.5; method=:krylov)
 ```
 
+
 ## Documentation
 
-The documentation contains usage examples, numerical-method descriptions, spectroscopy examples, time-evolution comparisons, and the API reference.
+Full documentation, tutorials, examples, and API reference are available at:
 
-- [Documentation](https://javahedi.github.io/SpinDynamics.jl/)
-- [Time evolution](https://javahedi.github.io/SpinDynamics.jl/dev/time_evolution/)
-- [Spectroscopy](https://javahedi.github.io/SpinDynamics.jl/dev/spectroscopy/)
-- [API reference](https://javahedi.github.io/SpinDynamics.jl/dev/api/)
+- [Documentation] https://javahedi.github.io/SpinDynamics.jl/dev/
 
 ## Examples
 
