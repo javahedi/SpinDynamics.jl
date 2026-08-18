@@ -58,3 +58,33 @@ using LinearAlgebra
 
     
 end
+
+
+@testset "Spin operator validation" begin
+    model = XXZChain(4; Jxy=1.0, Jz=1.0, nup=2)
+    ψ = zeros(Float64, length(model.states))
+
+    @test_throws ArgumentError create_spin_operator(0, :z)
+    @test_throws ArgumentError create_spin_operator(1, :foo)
+
+    Sz5 = create_spin_operator(5, :z)
+    @test_throws ArgumentError Sz5(ψ, model)
+
+    Sz1 = create_spin_operator(1, :z)
+    @test_throws DimensionMismatch Sz1(zeros(3), model)
+end
+
+
+@testset "Spin operators in fixed sectors" begin
+    model = XXZChain(4; nup=2)
+    ψ = zeros(Float64, length(model.states))
+    ψ[1] = 1.0
+
+    Sz = create_spin_operator(1, :z)
+    @test norm(Sz(ψ, model)) ≈ 0.5
+
+    for op in (:plus, :minus, :x, :y)
+        O = create_spin_operator(1, op)
+        @test_throws ArgumentError O(ψ, model)
+    end
+end

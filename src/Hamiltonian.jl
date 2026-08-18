@@ -47,9 +47,30 @@ module Hamiltonian
         ⟨Sz2⟩ = real(dot(ψ0, ψ_sz2))   # ⟨ψ| S_z(2) |ψ⟩
     """
     function create_spin_operator(site::Int, op_type::Symbol)
-        bit_pos = site - 1  # Convert to 0-based
+        site >= 1 || throw(ArgumentError("site must be at least 1"))
+
+        op_type in (:z, :plus, :minus, :x, :y) ||
+            throw(ArgumentError(
+                "unsupported spin operator: $op_type; expected :z, :plus, :minus, :x, or :y"
+            ))
+
+        bit_pos = site - 1
 
         function operator(ψ::AbstractVector{T}, model::SpinModel.Model) where T
+            site <= model.L ||
+                throw(ArgumentError("site $site is outside the model with L=$(model.L)"))
+
+            length(ψ) == length(model.states) ||
+                throw(DimensionMismatch(
+                    "state vector has length $(length(ψ)), expected $(length(model.states))"
+                ))
+
+            if model.mode === :sector && op_type !== :z
+                throw(ArgumentError(
+                    "operator $op_type changes total magnetization and cannot be applied " *
+                    "within a fixed-nup sector"
+                ))
+            end
 
             result = zeros(T, length(ψ))
 

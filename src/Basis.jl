@@ -6,9 +6,22 @@ module Basis
     export build_full_basis, build_sector_basis
 
 
+    @inline function _validate_basis_args(L::Int, nup::Union{Nothing,Int}=nothing)
+        L >= 1 || throw(ArgumentError("L must be at least 1"))
+        L <= 63 || throw(ArgumentError("L must be at most 63 when using UInt64 basis states"))
+
+        if nup !== nothing
+            0 <= nup <= L || throw(
+                ArgumentError("nup must satisfy 0 ≤ nup ≤ L")
+            )
+        end
+
+        return nothing
+    end
 
     # Full basis: all 2^L states
     function build_full_basis(L::Int)
+         _validate_basis_args(L)
         N = 1 << L
         states = Vector{UInt64}(undef, N)
         idxmap = Dict{UInt64, Int}()
@@ -22,6 +35,7 @@ module Basis
 
     # Sector basis: all states with exactly nup up-spins
     function build_sector_basis(L::Int, nup::Int)
+         _validate_basis_args(L, nup)
         states = UInt64[]
         sizehint!(states, binomial(L, nup))
         for comb in combinations(1:L, nup)
