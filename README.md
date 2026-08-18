@@ -3,45 +3,39 @@
 [![Build Status](https://github.com/javahedi/SpinDynamics.jl/actions/workflows/CI.yml/badge.svg?branch=main)](https://github.com/javahedi/SpinDynamics.jl/actions/workflows/CI.yml?query=branch%3Amain)
 
 <p align="center">
-  <img src="examples/lanczos_xxz_spectra_L20_Sz0.png" alt="Lanczos dynamical structure factor for the XXZ chain" width="720">
+  <img src="docs/src/assets/lanczos_xxz_spectra_L20_Sz0.png"
+       alt="Lanczos dynamical structure factor for the XXZ chain"
+       width="720">
 </p>
 
-**SpinDynamics.jl** is a Julia package for ground-state calculations, real-time evolution, and dynamical spectroscopy of quantum spin systems. It provides a compact public API for common spin-1/2 workflows while retaining direct access to matrix-free Lanczos, Krylov, Chebyshev, and Kernel Polynomial Method (KPM) routines for advanced use.
+**SpinDynamics.jl** is a Julia package for ground-state calculations, real-time evolution, and dynamical spectroscopy of quantum spin systems.
 
-The package is aimed at calculations where explicitly constructing the many-body Hamiltonian is unnecessary or too expensive. SpinDynamics.jl works directly with state vectors and applies the Hamiltonian on the fly, while optionally restricting the Hilbert space to a fixed-magnetization sector.
+It provides matrix-free Lanczos, Krylov, Chebyshev, and Kernel Polynomial Method (KPM) algorithms together with a compact high-level API for common spin-1/2 workflows.
 
-> **Status:** SpinDynamics.jl is under active development. The API is usable, but may still change before a stable release.
+> **Status:** SpinDynamics.jl is under active development. The API is usable but may evolve as the package develops.
 
-## What you can do
+## Features
 
-- Build spin-1/2 models in the full Hilbert space or a fixed-`nup` / U(1) sector.
-- Apply XX/XY hopping, Ising `SᶻSᶻ` interactions, local fields, and custom long-range couplings without assembling a dense Hamiltonian.
-- Compute ground states and extremal eigenvalues with Lanczos iteration.
-- Compute dynamical structure factors `S(q, ω)` using Lanczos or KPM.
-- Evolve quantum states in real time using Chebyshev or Krylov methods.
-- Measure local magnetization, connected correlations, and static structure factors.
-- Construct common initial states such as Néel, domain-wall, polarized, and locally flipped states.
+- Spin-1/2 models in the full Hilbert space or fixed-`nup` sectors
+- Matrix-free Hamiltonian application
+- Lanczos ground-state calculations
+- Krylov and Chebyshev real-time evolution
+- Static spin structure factors
+- Dynamical structure factors `S(q, ω)` using Lanczos or KPM
+- Common initial states and local observables
 
 ## Installation
 
-SpinDynamics.jl currently targets **Julia 1.11** and can be installed directly from GitHub:
+SpinDynamics.jl supports **Julia 1.10 and later**.
+
+Until registration in the Julia General registry, install directly from GitHub:
 
 ```julia
 using Pkg
 Pkg.add(url="https://github.com/javahedi/SpinDynamics.jl")
 ```
 
-For development, clone the repository and instantiate its environment:
-
-```bash
-git clone https://github.com/javahedi/SpinDynamics.jl.git
-cd SpinDynamics.jl
-julia --project=. -e 'using Pkg; Pkg.instantiate()'
-```
-
 ## Quick start
-
-The following example builds an antiferromagnetic XXZ chain in the zero-magnetization sector, computes its ground state, and evaluates the dynamical structure factor without explicitly constructing the Hamiltonian matrix.
 
 ```julia
 using SpinDynamics
@@ -65,69 +59,38 @@ S = dynamical_structure_factor(
     ψ0,
     q,
     ω;
-    method=:lanczos,
-    lanc_m=100,
-    eta=0.05,
+    method = :lanczos,
+    lanc_m = 100,
+    eta = 0.05,
 )
-
-println("Hilbert-space dimension: ", length(model.states))
-println("Ground-state energy: ", E0)
 ```
 
-The same public API also provides real-time evolution:
+Real-time evolution uses the same high-level interface:
 
 ```julia
 ψt = time_evolve(model, ψ0, 0.5; method=:krylov)
 ```
 
-For lower-level control, the underlying Lanczos, KPM, Krylov, Chebyshev, and matrix-free Hamiltonian routines remain directly accessible.
+## Documentation
 
-## Spectral methods
+The documentation contains usage examples, numerical-method descriptions, spectroscopy examples, time-evolution comparisons, and the API reference.
 
-SpinDynamics.jl currently provides two complementary approaches for zero-temperature dynamical spectra:
+- [Documentation](https://javahedi.github.io/SpinDynamics.jl/)
+- [Time evolution](https://javahedi.github.io/SpinDynamics.jl/dev/time_evolution/)
+- [Spectroscopy](https://javahedi.github.io/SpinDynamics.jl/dev/spectroscopy/)
+- [API reference](https://javahedi.github.io/SpinDynamics.jl/dev/api/)
 
-**Lanczos continued-fraction method** — useful when high spectral accuracy is required from a ground state and a moderate Krylov dimension is sufficient.
+## Examples
 
-**Kernel Polynomial Method (KPM)** — expands the spectral function in Chebyshev polynomials and supports Jackson damping for smooth reconstruction.
+Runnable scripts are kept in [`examples/`](examples/):
 
-<table>
-  <tr>
-    <td align="center"><b>Lanczos</b></td>
-    <td align="center"><b>KPM</b></td>
-  </tr>
-  <tr>
-    <td>
-      <img src="examples/lanczos_xxz_spectra_L20_Sz0.png"
-           alt="Lanczos dynamical structure factor for the XXZ chain">
-    </td>
-    <td>
-      <img src="examples/kpm_xxz_spectra_L20_Sz0.png"
-           alt="KPM dynamical structure factor for the XXZ chain">
-    </td>
-  </tr>
-</table>
+- [`example_lanczosSqw.jl`](examples/example_lanczosSqw.jl)
+- [`example_kpmSqw.jl`](examples/example_kpmSqw.jl)
+- [`example_time_evolution.jl`](examples/example_time_evolution.jl)
 
-
-See:
-
-- [`examples/example_lanczosSqw.jl`](examples/example_lanczosSqw.jl)
-- [`examples/example_kpmSqw.jl`](examples/example_kpmSqw.jl)
-
-## Real-time dynamics
-
-Real-time evolution is available through both Chebyshev expansion and Krylov projection. The example below compares both approaches against exact evolution for a small XXZ chain.
-
-<p align="center">
-  <img src="examples/time_evolution_L15_nup14.png"
-       alt="Comparison of exact, Chebyshev, and Krylov time evolution"
-       width="820">
-</p>
-
-See [`examples/example.jl`](examples/example.jl).
+The plotting dependencies used by these scripts are isolated in `examples/Project.toml`.
 
 ## Public API
-
-These high-level functions are the recommended starting point for common workflows:
 
 | Task | Function |
 | --- | --- |
@@ -138,44 +101,19 @@ These high-level functions are the recommended starting point for common workflo
 | Static structure factor | `structure_factor` |
 | Dynamical structure factor | `dynamical_structure_factor` |
 
-### Advanced API
+Lower-level Lanczos, KPM, Krylov, Chebyshev, basis, Hamiltonian, initial-state, and observable routines are also available for advanced use.
 
-Lower-level routines remain available when direct control over the numerical methods is needed:
+## Testing
 
-| Area | Functions |
-| --- | --- |
-| Basis construction | `build_full_basis`, `build_sector_basis` |
-| Generic model construction | `build_model`, `nn_hopping`, `long_range_hopping` |
-| Hamiltonian application | `apply_H!`, `apply_rescaled_H!` |
-| Lanczos | `lanczos_groundstate`, `lanczos_extremal`, `lanczos_tridiag`, `estimate_energy_bounds` |
-| Spectroscopy | `lanczos_sqw`, `kpm_sqw`, `kpm_dynamical_correlation` |
-| Time evolution | `chebyshev_time_evolve`, `krylov_time_evolve`, `krylov_time_evolve!` |
-| Initial states | `neel_state`, `domain_wall_state`, `polarized_state`, `polarized_state_with_flips` |
-| Observables | `magnetization_per_site`, `connected_correlations`, `structure_factor_Sq` |
-
-## Running the examples
-
-From the repository root:
-
-```bash
-julia --project=. examples/example_lanczosSqw.jl
-julia --project=. examples/example_kpmSqw.jl
-julia --project=. examples/example.jl
-```
-
-Some examples are computationally demanding. Reduce `L`, the number of frequency points, or the Krylov/KPM order when testing on a laptop.
-
-## Running the tests
+Run the complete test suite with:
 
 ```bash
 julia --project=. -e 'using Pkg; Pkg.test()'
 ```
 
-The GitHub Actions workflow also runs the test suite automatically on pushes and pull requests.
+The test suite includes package-quality checks with Aqua.jl and is also run through GitHub Actions.
 
-## Current scope and roadmap
-
-The package currently focuses on spin-1/2 lattice models represented in a computational basis, with optional conservation of total `Sᶻ`. Natural next steps include broader documentation, more systematic correctness tests and benchmarks, additional model/operator helpers, and continued stabilization of the public API.
+## Contributing
 
 Contributions, bug reports, and suggestions are welcome through GitHub issues and pull requests.
 
