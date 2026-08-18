@@ -38,3 +38,37 @@ using SpinDynamics
 
     @test ψ_neel_full[Int(s_expected) + 1] == 1.0
 end
+
+
+@testset "Polarized state" begin
+    model_full = XXZChain(4)
+
+    ψ_up = polarized_state(model_full; up=true)
+    ψ_down = polarized_state(model_full; up=false)
+
+    @test ψ_up isa Vector{Float64}
+    @test ψ_down isa Vector{Float64}
+    @test length(ψ_up) == 16
+    @test length(ψ_down) == 16
+
+    @test count(!iszero, ψ_up) == 1
+    @test count(!iszero, ψ_down) == 1
+    @test sum(abs2, ψ_up) ≈ 1.0
+    @test sum(abs2, ψ_down) ≈ 1.0
+
+    # |↑↑↑↑⟩ = 0b1111
+    @test ψ_up[16] == 1.0
+
+    # |↓↓↓↓⟩ = 0b0000
+    @test ψ_down[1] == 1.0
+
+    model_up = XXZChain(4; nup=4)
+    model_down = XXZChain(4; nup=0)
+    model_half = XXZChain(4; nup=2)
+
+    @test polarized_state(model_up; up=true) == [1.0]
+    @test polarized_state(model_down; up=false) == [1.0]
+
+    @test_throws ArgumentError polarized_state(model_half; up=true)
+    @test_throws ArgumentError polarized_state(model_half; up=false)
+end

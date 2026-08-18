@@ -69,28 +69,23 @@ module InitialStates
     # -------------------------------------------------
     function polarized_state(model::SpinModel.Model; up::Bool=true)
         L = model.L
-        
-        # Construct the fully polarized bitstring
-        s_up   = (UInt64(1) << L) - UInt64(1)  # all spins up: 0b111…1
-        s_down = UInt64(0)                       # all spins down: 0b000…0
-        s = up ? s_up : s_down
 
-        if model.mode == :sector
-            # In sector mode, create a vector in the restricted basis
-            ψ0 = zeros(Float64, length(model.states))
-            
-            # Check if the bitstring exists in the sector
-            idx = get(model.idxmap, s, nothing)
-            if idx === nothing
-                error("The requested polarized state does not exist in this sector.")
-            end
-            
-            ψ0[idx] = 1.0
-            return ψ0
+        s = up ? (UInt64(1) << L) - UInt64(1) : UInt64(0)
+
+        ψ0 = zeros(Float64, length(model.states))
+
+        idx = if model.mode === :full
+            Int(s) + 1
         else
-            # Full Hilbert space: just return the bitstring
-            return s
+            get(model.idxmap, s, 0)
         end
+
+        idx != 0 || throw(ArgumentError(
+            "requested polarized state is not contained in the model basis"
+        ))
+
+        ψ0[idx] = 1.0
+        return ψ0
     end
 
 
