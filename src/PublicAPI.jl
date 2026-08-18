@@ -1,4 +1,4 @@
-module FriendlyAPI
+module PublicAPI
 
 using ..SpinModel
 using ..Hamiltonian

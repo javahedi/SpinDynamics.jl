@@ -2,7 +2,7 @@ using Test
 using LinearAlgebra
 using SpinDynamics
 
-@testset "Friendly API: XXZChain" begin
+@testset "Public API: XXZChain" begin
     model = XXZChain(2; Jxy=1.0, Jz=1.0, nup=1)
 
     @test model.L == 2
@@ -27,7 +27,7 @@ using SpinDynamics
     @test eigvals(H) ≈ [-0.75, 0.25]
 end
 
-@testset "Friendly API: momenta" begin
+@testset "Public API: momenta" begin
     model = XXZChain(6; nup=3)
 
     q = momenta(model)
@@ -37,7 +37,7 @@ end
 end
 
 
-@testset "Friendly API: groundstate" begin
+@testset "Public API: groundstate" begin
     model = XXZChain(2; Jxy=1.0, Jz=1.0, nup=1)
 
     E0, ψ0 = groundstate(model; lanc_m=2)
@@ -53,7 +53,7 @@ end
 end
 
 
-@testset "Friendly API: time_evolve with Krylov" begin
+@testset "Public API: time_evolve with Krylov" begin
     model = XXZChain(2; Jxy=1.0, Jz=1.0, nup=1)
 
     H = [-0.25 0.5;
@@ -93,7 +93,7 @@ end
 end
 
 
-@testset "Friendly API: time_evolve with Chebyshev" begin
+@testset "Public API: time_evolve with Chebyshev" begin
     model = XXZChain(2; Jxy=1.0, Jz=1.0, nup=1)
 
     H = [-0.25 0.5;
@@ -118,7 +118,7 @@ end
 end
 
 
-@testset "Friendly API: automatic Chebyshev bounds" begin
+@testset "Public API: automatic Chebyshev bounds" begin
     model = XXZChain(2; Jxy=1.0, Jz=1.0, nup=1)
     ψ0 = ComplexF64[1.0, 0.0]
 
@@ -133,7 +133,7 @@ end
     @test norm(ψt) ≈ 1.0 atol=1e-6
 end
 
-@testset "Friendly API: structure_factor" begin
+@testset "Public API: structure_factor" begin
     model = XXZChain(4; Jxy=1.0, Jz=1.0, nup=2)
     _, ψ0 = groundstate(model; lanc_m=6)
 
@@ -151,7 +151,7 @@ end
 end
 
 
-@testset "Friendly API: dynamical_structure_factor with Lanczos" begin
+@testset "Public API: dynamical_structure_factor with Lanczos" begin
     model = XXZChain(4; Jxy=1.0, Jz=1.0, nup=2)
     _, ψ0 = groundstate(model; lanc_m=6)
 
@@ -182,7 +182,7 @@ end
 end
 
 
-@testset "Friendly API: dynamical_structure_factor with KPM" begin
+@testset "Public API: dynamical_structure_factor with KPM" begin
     model = XXZChain(4; Jxy=1.0, Jz=1.0, nup=2)
     _, ψ0 = groundstate(model; lanc_m=6)
 
