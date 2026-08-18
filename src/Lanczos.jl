@@ -1,7 +1,8 @@
 module Lanczos
 
 
-    using  LinearAlgebra
+    using LinearAlgebra
+    using Random
     using ..SpinModel
     using ..Hamiltonian
 
@@ -23,14 +24,19 @@ module Lanczos
     Returns:
     - (Emin, Emax) : minimum and maximum eigenvalues
     """
-    function lanczos_extremal(applyH!, model::SpinModel.Model; 
-                            lanc_m::Int=100, tol::Float64=1e-12) 
+    function lanczos_extremal(
+            applyH!,
+            model::SpinModel.Model;
+            lanc_m::Int=100,
+            tol::Float64=1e-12,
+            rng::AbstractRNG=Random.default_rng(),
+        ) 
 
         N =  length(model.states)  # Hilber dim
         m = min(lanc_m, N)
 
         # Initialize random starting vector
-        ψ0 = randn(ComplexF64, N)  # complex random vector
+        ψ0 = randn(rng, ComplexF64, N)  # complex random vector
         ψ0 ./= norm(ψ0)
 
         α = zeros(Float64, m)
@@ -78,14 +84,19 @@ module Lanczos
     end
 
 
-    function lanczos_groundstate(applyH!, model::SpinModel.Model;
-                             lanc_m::Int=100, tol::Float64=1e-12,
-                             orthogonalize_tol::Float64=1e-10)
+    function lanczos_groundstate(
+                applyH!,
+                model::SpinModel.Model;
+                lanc_m::Int=100,
+                tol::Float64=1e-12,
+                orthogonalize_tol::Float64=1e-10,
+                rng::AbstractRNG=Random.default_rng(),
+            )
     
         N = length(model.states)
         m = min(lanc_m, N)
 
-        ψ0 = randn(Float64, N)
+        ψ0 = randn(rng, Float64, N)
         ψ0 ./= norm(ψ0)
 
         α = zeros(Float64, m)

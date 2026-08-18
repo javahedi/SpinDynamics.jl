@@ -1,6 +1,7 @@
 using Test
 using LinearAlgebra
 using SpinDynamics
+using Random
 
 @testset "Lanczos tridiagonalization with complex vector" begin
     model = XXZChain(2; Jxy=1.0, Jz=1.0, nup=1)
@@ -115,4 +116,51 @@ end
 
     @test length(α) <= N
     @test length(β) == length(α) - 1
+end
+
+
+@testset "Lanczos reproducibility with explicit RNG" begin
+    model = XXZChain(6; Jxy=1.0, Jz=1.0, nup=3)
+
+    rng1 = MersenneTwister(1234)
+    rng2 = MersenneTwister(1234)
+
+    E1, ψ1 = groundstate(
+        model;
+        lanc_m=10,
+        rng=rng1,
+    )
+
+    E2, ψ2 = groundstate(
+        model;
+        lanc_m=10,
+        rng=rng2,
+    )
+
+    @test E1 ≈ E2 atol=1e-14
+    @test ψ1 ≈ ψ2 atol=1e-14
+end
+
+
+@testset "Lanczos extremal reproducibility" begin
+    model = XXZChain(6; nup=3)
+
+    rng1 = MersenneTwister(42)
+    rng2 = MersenneTwister(42)
+
+    bounds1 = lanczos_extremal(
+        apply_H!,
+        model;
+        lanc_m=10,
+        rng=rng1,
+    )
+
+    bounds2 = lanczos_extremal(
+        apply_H!,
+        model;
+        lanc_m=10,
+        rng=rng2,
+    )
+
+    @test all(isapprox.(bounds1, bounds2; atol=1e-14))
 end
