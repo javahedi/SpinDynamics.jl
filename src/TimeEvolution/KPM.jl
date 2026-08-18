@@ -27,8 +27,10 @@ module KPM
     using ..Chebyshev #: apply_rescaled_H!, estimate_energy_bounds  # Reuse existing functionality
     using ...InitialStates#: domain_wall_state_sector, domain_wall_state_full
     
-    export kpm_dynamical_correlation, kpm_dynamical_correlation_matrix,
-            run_kpm_dynamical, kpm_correlation_matrix, Sqω
+    export kpm_dynamical_correlation,
+       run_kpm_dynamical,
+       kpm_correlation_matrix,
+       Sqω
 
 
     # -------------------------------------------------------------------

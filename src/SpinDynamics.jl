@@ -57,8 +57,10 @@ module SpinDynamics
 
     export krylov_time_evolve!, krylov_time_evolve, KrylovWorkspace, run_krylov
 
-    export kpm_dynamical_correlation, kpm_dynamical_correlation_matrix, 
-            run_kpm_dynamical, kpm_correlation_matrix, Sqω
+    export kpm_dynamical_correlation,
+       run_kpm_dynamical,
+       kpm_correlation_matrix,
+       Sqω
 
 
     include("PublicAPI.jl")
