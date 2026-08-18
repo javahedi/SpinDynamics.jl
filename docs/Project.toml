@@ -1,0 +1,7 @@
+[deps]
+Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
+SpinDynamics = "bb1a7079-d21b-44b1-9579-2045e0d16936"
+
+[compat]
+Documenter = "1"
+julia = "1.10"
