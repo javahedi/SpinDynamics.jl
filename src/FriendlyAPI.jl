@@ -6,6 +6,7 @@ using ..Lanczos
 using ..TimeEvolution
 using ..Observables
 using ..LanczosSqw
+using ..KPM_Sqw
 
 export groundstate,
        time_evolve,
@@ -116,6 +117,7 @@ Compute the dynamical spin structure factor `S(q, ω)`.
 
 Currently supported methods:
 - `:lanczos`
+- `:kpm`
 """
 function dynamical_structure_factor(
     model::SpinModel.Model,
@@ -130,6 +132,15 @@ function dynamical_structure_factor(
 
     if method === :lanczos
         return LanczosSqw.lanczos_sqw(
+            ψ0,
+            model,
+            q_list,
+            ω_range;
+            kwargs...
+        )
+
+    elseif method === :kpm
+        return KPM_Sqw.kpm_sqw(
             ψ0,
             model,
             q_list,

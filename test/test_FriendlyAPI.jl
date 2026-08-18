@@ -180,3 +180,24 @@ end
         method=:unknown,
     )
 end
+
+
+@testset "Friendly API: dynamical_structure_factor with KPM" begin
+    model = XXZChain(4; Jxy=1.0, Jz=1.0, nup=2)
+    _, ψ0 = groundstate(model; lanc_m=6)
+
+    q = momenta(model)
+    ω = collect(range(-2.0, 2.0; length=40))
+
+    S = dynamical_structure_factor(
+        model,
+        ψ0,
+        q,
+        ω;
+        method=:kpm,
+        kpm_m=40,
+    )
+
+    @test size(S) == (length(q), length(ω))
+    @test all(isfinite, S)
+end
