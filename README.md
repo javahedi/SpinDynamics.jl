@@ -6,7 +6,7 @@
   <img src="examples/lanczos_xxz_spectra_L20_Sz0.png" alt="Lanczos dynamical structure factor for the XXZ chain" width="720">
 </p>
 
-**SpinDynamics.jl** is a Julia package for exact and Krylov-based simulations of quantum spin systems. It provides matrix-free Hamiltonian application, symmetry-reduced bases, Lanczos and Kernel Polynomial Method (KPM) spectroscopy, and Chebyshev/Krylov real-time evolution.
+**SpinDynamics.jl** is a Julia package for ground-state calculations, real-time evolution, and dynamical spectroscopy of quantum spin systems. It provides a compact public API for common spin-1/2 workflows while retaining direct access to matrix-free Lanczos, Krylov, Chebyshev, and Kernel Polynomial Method (KPM) routines for advanced use.
 
 The package is aimed at calculations where explicitly constructing the many-body Hamiltonian is unnecessary or too expensive. SpinDynamics.jl works directly with state vectors and applies the Hamiltonian on the fly, while optionally restricting the Hilbert space to a fixed-magnetization sector.
 
@@ -41,39 +41,46 @@ julia --project=. -e 'using Pkg; Pkg.instantiate()'
 
 ## Quick start
 
-The following example builds an antiferromagnetic XXZ chain in the zero-magnetization sector and finds its ground state without explicitly constructing the Hamiltonian matrix.
+The following example builds an antiferromagnetic XXZ chain in the zero-magnetization sector, computes its ground state, and evaluates the dynamical structure factor without explicitly constructing the Hamiltonian matrix.
 
 ```julia
 using SpinDynamics
 
 L = 16
-Jxy = 1.0
-Jz = 1.0
 
-model = build_model(
+model = XXZChain(
     L;
+    Jxy = 1.0,
+    Jz = 1.0,
     nup = L ÷ 2,
-    hopping = nn_hopping(L, Jxy),
-    zz = nn_hopping(L, Jz),
-    onsite_field = zeros(L),
 )
 
-E0, ψ0 = lanczos_groundstate(apply_H!, model)
+E0, ψ0 = groundstate(model)
+
+q = momenta(model)
+ω = range(0.0, 5.0; length=100)
+
+S = dynamical_structure_factor(
+    model,
+    ψ0,
+    q,
+    ω;
+    method=:lanczos,
+    lanc_m=100,
+    eta=0.05,
+)
 
 println("Hilbert-space dimension: ", length(model.states))
 println("Ground-state energy: ", E0)
 ```
 
-### Dynamical structure factor with Lanczos
+The same public API also provides real-time evolution:
 
 ```julia
-q = collect(2π * (0:L-1) / L)
-ω = collect(range(0.0, 5.0, length=100))
-
-S = lanczos_sqw(ψ0, model, q, ω; lanc_m=100, eta=0.05)
+ψt = time_evolve(model, ψ0, 0.5; method=:krylov)
 ```
 
-The corresponding example script is [`examples/example_lanczosSqw.jl`](examples/example_lanczosSqw.jl).
+For lower-level control, the underlying Lanczos, KPM, Krylov, Chebyshev, and matrix-free Hamiltonian routines remain directly accessible.
 
 ## Spectral methods
 
@@ -102,13 +109,28 @@ Real-time evolution is available through both Chebyshev expansion and Krylov pro
 
 See [`examples/example.jl`](examples/example.jl).
 
-## Main API
+## Public API
+
+These high-level functions are the recommended starting point for common workflows:
+
+| Task | Function |
+| --- | --- |
+| XXZ model construction | `XXZChain` |
+| Momentum grid | `momenta` |
+| Ground state | `groundstate` |
+| Real-time evolution | `time_evolve` |
+| Static structure factor | `structure_factor` |
+| Dynamical structure factor | `dynamical_structure_factor` |
+
+### Advanced API
+
+Lower-level routines remain available when direct control over the numerical methods is needed:
 
 | Area | Functions |
 | --- | --- |
 | Basis construction | `build_full_basis`, `build_sector_basis` |
-| Model construction | `build_model`, `nn_hopping`, `long_range_hopping` |
-| Hamiltonian | `apply_H!`, `apply_rescaled_H!` |
+| Generic model construction | `build_model`, `nn_hopping`, `long_range_hopping` |
+| Hamiltonian application | `apply_H!`, `apply_rescaled_H!` |
 | Lanczos | `lanczos_groundstate`, `lanczos_extremal`, `lanczos_tridiag`, `estimate_energy_bounds` |
 | Spectroscopy | `lanczos_sqw`, `kpm_sqw`, `kpm_dynamical_correlation` |
 | Time evolution | `chebyshev_time_evolve`, `krylov_time_evolve`, `krylov_time_evolve!` |
@@ -137,7 +159,7 @@ The GitHub Actions workflow also runs the test suite automatically on pushes and
 
 ## Current scope and roadmap
 
-The package currently focuses on spin-1/2 lattice models represented in a computational basis, with optional conservation of total `Sᶻ`. Natural next steps include broader documentation, more systematic benchmarks, additional model/operator helpers, and a stabilized public API.
+The package currently focuses on spin-1/2 lattice models represented in a computational basis, with optional conservation of total `Sᶻ`. Natural next steps include broader documentation, more systematic correctness tests and benchmarks, additional model/operator helpers, and continued stabilization of the public API.
 
 Contributions, bug reports, and suggestions are welcome through GitHub issues and pull requests.
 
