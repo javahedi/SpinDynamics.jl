@@ -37,26 +37,29 @@ module InitialStates
     # -------------------------------------------------
     # Néel state: ↑↓↑↓... (starting with ↑ at site 1)
     # -------------------------------------------------
-    function neel_state(model::SpinModel.Model)
-        if model.mode == :sector
-            s = UInt64(0)
-            for i in 0:(model.L-1)
-                if isodd(i+1)   # site index starting at 1
-                    s |= UInt64(1) << i
-                end
+   function neel_state(model::SpinModel.Model)
+        s = UInt64(0)
+
+        for i in 0:(model.L - 1)
+            if isodd(i + 1)
+                s |= UInt64(1) << i
             end
-            ψ0 = zeros(Float64, length(model.states))
-            ψ0[model.idxmap[s]] = 1.0
-            return ψ0
-        else
-            s = UInt64(0)
-            for i in 0:(model.L-1)
-                if isodd(i+1)
-                    s |= UInt64(1) << i
-                end
-            end
-            return s
         end
+
+        ψ0 = zeros(Float64, length(model.states))
+
+        idx = if model.mode === :full
+            Int(s) + 1
+        else
+            get(model.idxmap, s, 0)
+        end
+
+        idx != 0 || throw(ArgumentError(
+            "Néel state is not contained in the model basis"
+        ))
+
+        ψ0[idx] = 1.0
+        return ψ0
     end
 
 
