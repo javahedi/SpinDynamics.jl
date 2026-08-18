@@ -61,8 +61,8 @@ module SpinDynamics
             run_kpm_dynamical, kpm_correlation_matrix, Sqω
 
 
-    include("FriendlyAPI.jl")
-    using .FriendlyAPI
+    include("PublicAPI.jl")
+    using .PublicAPI
     export groundstate,
        time_evolve,
        structure_factor,
