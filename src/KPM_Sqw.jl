@@ -10,16 +10,21 @@ module KPM_Sqw
     export kpm_sqw
 
 
+    function _rescaling_from_bounds(E_min::Real, E_max::Real)
+        a = (E_max - E_min) / (2 * 0.99)
+        b = (E_max + E_min) / 2
+        return Float64(a), Float64(b)
+    end
+
+
     """
         get_rescaling_params(N::Int, apply_H!, model::SpinModel.Model; lanc_m=80)
     Estimate the rescaling parameters a,b to map H to Ḣ = (H - b)/a in [-1,1].
     Uses Lanczos to estimate the extremal eigenvalues of H.
     """
-    function get_rescaling_params(apply_H!, model::SpinModel.Model; lanc_m::Int=80)
+   function get_rescaling_params(apply_H!, model::SpinModel.Model; lanc_m::Int=80)
         E_min, E_max = estimate_energy_bounds(apply_H!, model; lanc_m=lanc_m)
-        a = (E_max - E_min) / 2 * 0.99
-        b = (E_max + E_min) / 2
-        return a, b
+        return _rescaling_from_bounds(E_min, E_max)
     end
    
 
@@ -81,18 +86,18 @@ module KPM_Sqw
         v_next = similar(phi)
 
         # μ₀ = ⟨phi|phi⟩
-        mu[1] = real(dot(conj(phi), v_prev))
+        mu[1] = real(dot(phi, v_prev))
 
         # v_curr = H'|phi⟩
         apply_rescaled_H!(v_curr, v_prev, apply_H!, model, a, b)
-        mu[2] = real(dot(conj(phi), v_curr))
+        mu[2] = real(dot(phi, v_curr))
 
         for m in 2:M-1
             # v_next = 2 H' v_curr - v_prev
             apply_rescaled_H!(v_next, v_curr, apply_H!, model, a, b)
             @. v_next = 2.0 * v_next - v_prev
 
-            mu[m+1] = real(dot(conj(phi), v_next))
+            mu[m+1] = real(dot(phi, v_next))
 
             # (optional safety renormalization)
             nv = norm(v_next)
