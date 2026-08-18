@@ -132,3 +132,15 @@ end
 
     @test norm(ψt) ≈ 1.0 atol=1e-6
 end
+
+@testset "Friendly API: structure_factor" begin
+    model = XXZChain(4; Jxy=1.0, Jz=1.0, nup=2)
+    _, ψ0 = groundstate(model; lanc_m=6)
+
+    Sq_friendly = structure_factor(model, ψ0)
+    Sq_lowlevel = structure_factor_Sq(ψ0, model)
+
+    @test Sq_friendly == Sq_lowlevel
+    @test length(Sq_friendly) == model.L
+    @test all(isfinite, values(Sq_friendly))
+end

@@ -5,9 +5,10 @@ using ..Hamiltonian
 using ..Lanczos
 using ..TimeEvolution
 
+using ..Observables
 
-export groundstate
-export groundstate, time_evolve
+export groundstate, time_evolve, structure_factor
+
 
 """
     groundstate(model; method=:lanczos, kwargs...)
@@ -80,6 +81,24 @@ function time_evolve(
     end
 
     throw(ArgumentError("unsupported time-evolution method: $method"))
+end
+
+
+
+
+"""
+    structure_factor(model, ψ)
+
+Compute the static spin structure factor `S(q)`.
+
+Returns the same momentum-to-value mapping as the underlying
+`structure_factor_Sq` implementation.
+"""
+function structure_factor(
+    model::SpinModel.Model,
+    ψ::AbstractVector,
+)
+    return Observables.structure_factor_Sq(ψ, model)
 end
 
 end
