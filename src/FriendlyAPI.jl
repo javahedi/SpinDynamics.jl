@@ -40,12 +40,14 @@ Evolve a state by time `t`.
 
 Currently supported methods:
 - `:krylov`
+- `:chebyshev`
 """
 function time_evolve(
     model::SpinModel.Model,
     ψ0::AbstractVector,
     t::Real;
     method::Symbol=:krylov,
+    Ebounds=nothing,
     kwargs...
 )
     if method === :krylov
@@ -54,6 +56,25 @@ function time_evolve(
             Float64(t),
             Hamiltonian.apply_H!,
             model;
+            kwargs...
+        )
+
+    elseif method === :chebyshev
+        bounds = if isnothing(Ebounds)
+            Lanczos.estimate_energy_bounds(
+                Hamiltonian.apply_H!,
+                model,
+            )
+        else
+            Ebounds
+        end
+
+        return TimeEvolution.chebyshev_time_evolve(
+            ψ0,
+            Float64(t),
+            Hamiltonian.apply_H!,
+            model;
+            Ebounds=bounds,
             kwargs...
         )
     end

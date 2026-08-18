@@ -91,3 +91,44 @@ end
         method=:unknown,
     )
 end
+
+
+@testset "Friendly API: time_evolve with Chebyshev" begin
+    model = XXZChain(2; Jxy=1.0, Jz=1.0, nup=1)
+
+    H = [-0.25 0.5;
+          0.5 -0.25]
+
+    ψ0 = ComplexF64[1.0, 0.0]
+    t = 0.3
+
+    ψ_exact = exp(-1im * t * H) * ψ0
+
+    ψ_cheb = time_evolve(
+        model,
+        ψ0,
+        t;
+        method=:chebyshev,
+        cheb_n=30,
+        Ebounds=(-0.75, 0.25),
+    )
+
+    @test ψ_cheb ≈ ψ_exact atol=1e-8
+    @test norm(ψ_cheb) ≈ 1.0 atol=1e-8
+end
+
+
+@testset "Friendly API: automatic Chebyshev bounds" begin
+    model = XXZChain(2; Jxy=1.0, Jz=1.0, nup=1)
+    ψ0 = ComplexF64[1.0, 0.0]
+
+    ψt = time_evolve(
+        model,
+        ψ0,
+        0.1;
+        method=:chebyshev,
+        cheb_n=20,
+    )
+
+    @test norm(ψt) ≈ 1.0 atol=1e-6
+end
