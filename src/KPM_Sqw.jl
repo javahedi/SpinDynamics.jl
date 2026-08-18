@@ -31,13 +31,17 @@ module KPM_Sqw
 
 
 
-    function kpm_sw(phi::AbstractVector{ComplexF64},
-                            apply_H!,
-                            model::SpinModel.Model,
-                            ω_range::AbstractVector{Float64};
-                            a::Float64, b::Float64,
-                            kpm_m::Int=200, 
-                            kernel::Symbol=:jackson)
+   function kpm_sw(
+            phi::AbstractVector{ComplexF64},
+            apply_H!,
+            model::SpinModel.Model,
+            ω_range::AbstractVector{Float64};
+            a::Float64,
+            b::Float64,
+            E0::Float64,
+            kpm_m::Int=200,
+            kernel::Symbol=:jackson,
+        )
 
         # Compute moments correctly
 
@@ -51,28 +55,38 @@ module KPM_Sqw
         # Reconstruct spectrum
         S = zeros(Float64, length(ω_range))
         
-        for (iω, ω) in enumerate(ω_range)
-            x = (ω - b) / a
-            x = clamp(x, -0.999, 0.999)  # Avoid boundaries
-            
-            # Chebyshev polynomials at this x
+       for (iω, ω) in enumerate(ω_range)
+            # ω is an excitation energy, while the Chebyshev expansion
+            # is performed for the absolute Hamiltonian H.
+            x = (ω + E0 - b) / a
+
+            if abs(x) >= 1.0
+                S[iω] = 0.0
+                continue
+            end
+
             T = zeros(Float64, kpm_m)
             T[1] = 1.0
+
             if kpm_m >= 2
                 T[2] = x
             end
+
             for n in 3:kpm_m
-                T[n] = 2.0 * x * T[n-1] - T[n-2]
+                T[n] = 2.0 * x * T[n - 1] - T[n - 2]
             end
-            
-            # KPM reconstruction formula
+
             sum_val = μ[1] * T[1]
+
             for n in 2:kpm_m
                 sum_val += 2.0 * μ[n] * T[n]
             end
-            
+
             denom = π * sqrt(1.0 - x^2)
-            S[iω] = max(0.0, sum_val / denom)  # Ensure non-negative
+
+            # 1/a converts the density from rescaled x units
+            # back to physical energy units.
+            S[iω] = max(0.0, sum_val / (a * denom))
         end
         
         return S
@@ -182,12 +196,18 @@ module KPM_Sqw
                             b::Union{Nothing,Float64}=nothing,
                             kpm_m::Int=200,
                             kernel::Symbol=:jackson)
+
+                
         
         ψ0c = ComplexF64.(ψ0)
         Qn = length(q_list)
         W = length(ω_range)
         Smat = zeros(Float64, Qn, W)
-        
+
+        tmp = similar(ψ0c)
+        apply_H!(tmp, ψ0c, model)
+        E0 = real(dot(ψ0c, tmp))
+                
         # Get rescaling parameters once
         if a === nothing || b === nothing
             a, b = get_rescaling_params(apply_H!, model)
@@ -217,9 +237,19 @@ module KPM_Sqw
             #end
           
             
-            S = kpm_sw(phi, apply_H!, model, ω_range; kpm_m=kpm_m, 
-                            a=a, b=b, kernel=kernel)
-            Smat[iq, :] .= S
+            S = kpm_sw(
+                phi,
+                apply_H!,
+                model,
+                ω_range;
+                kpm_m=kpm_m,
+                a=a,
+                b=b,
+                E0=E0,
+                kernel=kernel,
+            )
+
+            Smat[iq, :] .= norm_phi^2 .* S
         end
         
         return Smat
