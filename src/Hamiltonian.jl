@@ -116,74 +116,138 @@ module Hamiltonian
 
     # ------------------------
     # Full Hilbert space H
-    function apply_H!(out::AbstractVector{T}, ψ::AbstractVector{T}, 
-                            model::SpinModel.Model) where T <: Number
-        L = model.L
-        N = length(ψ)
-        #@assert N == (1 << L) "State vector size doesn't match Hilbert space dimension"
+    # function apply_H!(out::AbstractVector{T}, ψ::AbstractVector{T}, 
+    #                         model::SpinModel.Model) where T <: Number
+    #     L = model.L
+    #     N = length(ψ)
+    #     #@assert N == (1 << L) "State vector size doesn't match Hilbert space dimension"
 
-        fill!(out, zero(T))
+    #     fill!(out, zero(T))
 
-        # Precompute thread-local storage
-        #nth = nthreads()
-        #thread_buffers = [zeros(T, N) for _ in 1:nth]
-        thread_buffers = [zeros(T, N) for _ in 1:Threads.maxthreadid()]
+    #     # Precompute thread-local storage
+    #     #nth = nthreads()
+    #     #thread_buffers = [zeros(T, N) for _ in 1:nth]
+    #     thread_buffers = [zeros(T, N) for _ in 1:Threads.maxthreadid()]
         
 
+    #     Threads.@threads for idx in 1:N
+    #         tid = threadid()
+    #         local_out = thread_buffers[tid]
+    #         amp = ψ[idx]
+
+    #         if iszero(amp)
+    #             continue
+    #         end
+
+    #         # choose state depending on mode
+    #         state = model.mode == :full ? UInt64(idx-1) : model.states[idx]
+    #         diag = zero(T)
+
+    #         # diagonal field
+    #         # Diagonal terms
+    #         for i in 1:L
+    #             diag += T(model.onsite_field[i] * sz_value(bit_at(state, i-1)))
+    #         end
+
+    #         # ZZ terms
+    #         for (i, j, Jz) in model.zz_list
+    #             diag += T(Jz * sz_value(bit_at(state, i-1)) * sz_value(bit_at(state, j-1)))
+    #         end
+
+    #         @inbounds local_out[idx] += diag * amp
+
+    #         # hopping terms
+    #         for (i, j, Jxy) in model.hopping_list
+    #             bit_i = bit_at(state, i-1)
+    #             bit_j = bit_at(state, j-1)
+                
+    #             if bit_i != bit_j
+    #                 new_state = flip_bits(state,i-1,j-1)
+    #                 if model.mode == :full
+    #                     new_idx = Int(new_state)+1
+    #                     @inbounds local_out[new_idx] += T(Jxy)*amp
+    #                 elseif model.mode == :sector
+    #                     if haskey(model.idxmap, new_state)
+    #                         new_idx = model.idxmap[new_state]
+    #                         @inbounds local_out[new_idx] += T(Jxy)*amp
+    #                     end
+    #                 end
+    #             end
+    #         end
+    #     end
+
+    #     # Combine thread results
+    #     # for i in 1:nth
+    #     #     @inbounds out .+= thread_buffers[i]
+    #     # end
+    #     for buffer in thread_buffers
+    #         @inbounds out .+= buffer
+    #     end
+        
+    #     return out
+    # end
+
+    function apply_H!(
+        out::AbstractVector{T},
+        ψ::AbstractVector{T},
+        model::SpinModel.Model,
+    ) where T <: Number
+
+        L = model.L
+        N = length(ψ)
+
+        @assert length(out) == N
+
         Threads.@threads for idx in 1:N
-            tid = threadid()
-            local_out = thread_buffers[tid]
-            amp = ψ[idx]
+            state = model.mode === :full ? UInt64(idx - 1) : model.states[idx]
 
-            if iszero(amp)
-                continue
-            end
-
-            # choose state depending on mode
-            state = model.mode == :full ? UInt64(idx-1) : model.states[idx]
+            # Diagonal contribution
             diag = zero(T)
 
-            # diagonal field
-            # Diagonal terms
             for i in 1:L
-                diag += T(model.onsite_field[i] * sz_value(bit_at(state, i-1)))
+                diag += T(
+                    model.onsite_field[i] *
+                    sz_value(bit_at(state, i - 1))
+                )
             end
 
-            # ZZ terms
             for (i, j, Jz) in model.zz_list
-                diag += T(Jz * sz_value(bit_at(state, i-1)) * sz_value(bit_at(state, j-1)))
+                diag += T(
+                    Jz *
+                    sz_value(bit_at(state, i - 1)) *
+                    sz_value(bit_at(state, j - 1))
+                )
             end
 
-            @inbounds local_out[idx] += diag * amp
+            value = diag * ψ[idx]
 
-            # hopping terms
+            # Off-diagonal XY contribution.
+            # Each thread writes only to out[idx], so no thread-local
+            # output buffers are required.
             for (i, j, Jxy) in model.hopping_list
-                bit_i = bit_at(state, i-1)
-                bit_j = bit_at(state, j-1)
-                
+                bit_i = bit_at(state, i - 1)
+                bit_j = bit_at(state, j - 1)
+
                 if bit_i != bit_j
-                    new_state = flip_bits(state,i-1,j-1)
-                    if model.mode == :full
-                        new_idx = Int(new_state)+1
-                        @inbounds local_out[new_idx] += T(Jxy)*amp
-                    elseif model.mode == :sector
-                        if haskey(model.idxmap, new_state)
-                            new_idx = model.idxmap[new_state]
-                            @inbounds local_out[new_idx] += T(Jxy)*amp
+                    new_state = flip_bits(state, i - 1, j - 1)
+
+                    if model.mode === :full
+                        new_idx = Int(new_state) + 1
+                        @inbounds value += T(Jxy) * ψ[new_idx]
+
+                    else
+                        new_idx = get(model.idxmap, new_state, 0)
+
+                        if new_idx != 0
+                            @inbounds value += T(Jxy) * ψ[new_idx]
                         end
                     end
                 end
             end
+
+            @inbounds out[idx] = value
         end
 
-        # Combine thread results
-        # for i in 1:nth
-        #     @inbounds out .+= thread_buffers[i]
-        # end
-        for buffer in thread_buffers
-            @inbounds out .+= buffer
-        end
-        
         return out
     end
 
