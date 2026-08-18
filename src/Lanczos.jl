@@ -187,9 +187,10 @@ module Lanczos
                             lanc_m::Int=100, tol::Float64=1e-12)
 
         n = length(v)
-        V = Vector{Vector{ComplexF64}}(undef, lanc_m)
-        α = zeros(Float64, lanc_m)
-        β = zeros(Float64, lanc_m-1)
+        m = min(lanc_m, n)
+        V = Vector{Vector{ComplexF64}}(undef, m)
+        α = zeros(Float64, m)
+        β = zeros(Float64, m-1)
 
         # workspace
         w = zeros(ComplexF64, n)
@@ -200,9 +201,9 @@ module Lanczos
         end
 
         V[1] = copy(v) / normv
-        m_eff = lanc_m
+        m_eff = m
 
-        for j in 1:lanc_m-1
+        for j in 1:m-1
             applyH!(w, V[j], model)               # w = H * V[j]
             α[j] = real(dot(V[j], w))       # α_j
 
@@ -222,9 +223,9 @@ module Lanczos
         end
 
         # last α (if didn't fill last slot)
-        if m_eff == lanc_m
-            applyH!(w, V[lanc_m], model)
-            α[lanc_m] = real(dot(V[lanc_m], w))
+        if m_eff == m
+            applyH!(w, V[m], model)
+            α[m] = real(dot(V[m], w))
         else
             α = α[1:m_eff]
             β = β[1:m_eff-1]

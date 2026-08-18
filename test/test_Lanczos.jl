@@ -97,3 +97,22 @@ end
     @test Emin ≈ first(exact) atol=1e-12
     @test Emax ≈ last(exact) atol=1e-12
 end
+
+
+@testset "Lanczos tridiagonal dimension is capped" begin
+    model = XXZChain(4; nup=2)
+    N = length(model.states)
+
+    v = randn(ComplexF64, N)
+    v ./= norm(v)
+
+    α, β, _ = lanczos_tridiag(
+        apply_H!,
+        model,
+        v;
+        lanc_m=100,
+    )
+
+    @test length(α) <= N
+    @test length(β) == length(α) - 1
+end
