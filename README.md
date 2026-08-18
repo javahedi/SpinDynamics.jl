@@ -90,9 +90,23 @@ SpinDynamics.jl currently provides two complementary approaches for zero-tempera
 
 **Kernel Polynomial Method (KPM)** — expands the spectral function in Chebyshev polynomials and supports Jackson damping for smooth reconstruction.
 
-<p align="center">
-  <img src="examples/kpm_xxz_spectra_L20_Sz0.png" alt="KPM dynamical structure factor for the XXZ chain" width="620">
-</p>
+<table>
+  <tr>
+    <td align="center"><b>Lanczos</b></td>
+    <td align="center"><b>KPM</b></td>
+  </tr>
+  <tr>
+    <td>
+      <img src="examples/lanczos_xxz_spectra_L20_Sz0.png"
+           alt="Lanczos dynamical structure factor for the XXZ chain">
+    </td>
+    <td>
+      <img src="examples/kpm_xxz_spectra_L20_Sz0.png"
+           alt="KPM dynamical structure factor for the XXZ chain">
+    </td>
+  </tr>
+</table>
+
 
 See:
 
@@ -104,7 +118,9 @@ See:
 Real-time evolution is available through both Chebyshev expansion and Krylov projection. The example below compares both approaches against exact evolution for a small XXZ chain.
 
 <p align="center">
-  <img src="examples/magnetization_comparison_L15_nup14.png" alt="Comparison of exact, Chebyshev, and Krylov magnetization dynamics" width="820">
+  <img src="examples/time_evolution_L15_nup14.png"
+       alt="Comparison of exact, Chebyshev, and Krylov time evolution"
+       width="820">
 </p>
 
 See [`examples/example.jl`](examples/example.jl).
