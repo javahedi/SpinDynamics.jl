@@ -80,19 +80,21 @@ module Lanczos
                              orthogonalize_tol::Float64=1e-10)
     
         N = length(model.states)
+        m = min(lanc_m, N)
+
         ψ0 = randn(Float64, N)
         ψ0 ./= norm(ψ0)
 
-        α = zeros(Float64, lanc_m)
-        β = zeros(Float64, lanc_m-1)
-        V = Matrix{Float64}(undef, N, lanc_m)
+        α = zeros(Float64, m)
+        β = zeros(Float64, m-1)
+        V = Matrix{Float64}(undef, N, m)
         V[:,1] = ψ0
 
         w = similar(ψ0)
         
-        m_actual = lanc_m
+        m_actual = m
 
-        for j in 1:lanc_m
+        for j in 1:m
             vj = view(V, :, j)
             applyH!(w, vj, model)
 
@@ -113,7 +115,7 @@ module Lanczos
                 w .= w .- α[j] .* vj .- β[j-1] .* view(V, :, j-1)
             end
 
-            if j < lanc_m
+            if j < m
                 β[j] = norm(w)
                 
                 # Check for breakdown and numerical stability

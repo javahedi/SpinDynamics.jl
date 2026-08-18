@@ -29,6 +29,7 @@ end
     model = XXZChain(6; Jxy=1.0, Jz=1.0, nup=3)
 
     N = length(model.states)
+    
 
     H = zeros(Float64, N, N)
     e = zeros(Float64, N)
@@ -48,4 +49,22 @@ end
     @test E0 ≈ E_exact atol=1e-12
     @test norm(ψ0) ≈ 1.0 atol=1e-12
     @test norm(H * ψ0 - E0 * ψ0) < 1e-10
+end
+
+
+
+@testset "Lanczos dimension is capped by Hilbert space" begin
+    model = XXZChain(4; nup=2)
+
+    N = length(model.states)
+
+    E0, ψ0 = groundstate(model; lanc_m=100)
+
+    @test length(ψ0) == N
+    @test norm(ψ0) ≈ 1.0 atol=1e-12
+
+    Hψ = similar(ψ0)
+    apply_H!(Hψ, ψ0, model)
+
+    @test norm(Hψ - E0 * ψ0) < 1e-10
 end
