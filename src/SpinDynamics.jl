@@ -9,7 +9,7 @@ module SpinDynamics
 
     include("SpinModel.jl")
     using .SpinModel
-    export Model, build_model, nn_hopping, long_range_hopping
+    export Model, build_model, nn_hopping, long_range_hopping, XXZChain, momenta
 
     include("Hamiltonian.jl")
     using .Hamiltonian

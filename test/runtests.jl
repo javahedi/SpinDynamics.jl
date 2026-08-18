@@ -6,7 +6,7 @@ using SpinDynamics
 include("test_SpinModel.jl")
 include("test_InitialStates.jl")
 include("test_Hamiltonian.jl")
-
+include("test_FriendlyAPI.jl")
 #=
 
 @testset "Basis: full Hilbert space" begin
