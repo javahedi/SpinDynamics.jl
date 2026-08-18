@@ -68,3 +68,32 @@ end
 
     @test norm(Hψ - E0 * ψ0) < 1e-10
 end
+
+
+@testset "Lanczos extremal dimension is capped" begin
+    model = XXZChain(4; Jxy=1.0, Jz=1.0, nup=2)
+
+    N = length(model.states)
+
+    H = zeros(Float64, N, N)
+    e = zeros(Float64, N)
+    out = zeros(Float64, N)
+
+    for j in 1:N
+        fill!(e, 0.0)
+        e[j] = 1.0
+        apply_H!(out, e, model)
+        H[:, j] .= out
+    end
+
+    exact = eigvalsh(H)
+
+    Emin, Emax = lanczos_extremal(
+        apply_H!,
+        model;
+        lanc_m=100,
+    )
+
+    @test Emin ≈ first(exact) atol=1e-12
+    @test Emax ≈ last(exact) atol=1e-12
+end

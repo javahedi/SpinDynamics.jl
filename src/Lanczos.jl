@@ -27,18 +27,20 @@ module Lanczos
                             lanc_m::Int=100, tol::Float64=1e-12) 
 
         N =  length(model.states)  # Hilber dim
+        m = min(lanc_m, N)
+
         # Initialize random starting vector
         ψ0 = randn(ComplexF64, N)  # complex random vector
         ψ0 ./= norm(ψ0)
 
-        α = zeros(Float64, lanc_m)
-        β = zeros(Float64, lanc_m-1)
+        α = zeros(Float64, m)
+        β = zeros(Float64, m-1)
 
         v_prev = copy(ψ0)
         w = similar(ψ0)
         v_curr = similar(ψ0)
 
-        for j in 1:lanc_m
+        for j in 1:m
             # Apply Hamiltonian
             applyH!(w, v_prev, model)
          
@@ -53,7 +55,7 @@ module Lanczos
                 @. w -= α[j] * v_prev + β[j-1] * v_curr
             end
 
-            if j < lanc_m
+            if j < m
                 β[j] = norm(w)
                 if β[j] < tol
                     α = α[1:j]
@@ -70,7 +72,7 @@ module Lanczos
         end
 
         TR = SymTridiagonal(α, β)
-        evals = eigen(TR).values
+        evals = eigvals(TR)
         return minimum(evals), maximum(evals)
     end
 
