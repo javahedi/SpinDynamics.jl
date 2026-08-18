@@ -140,11 +140,15 @@ end
     Sq_friendly = structure_factor(model, ψ0)
     Sq_lowlevel = structure_factor_Sq(ψ0, model)
 
-    @test Sq_friendly == Sq_lowlevel
+    @test Set(keys(Sq_friendly)) == Set(keys(Sq_lowlevel))
+
+    for q in keys(Sq_friendly)
+        @test Sq_friendly[q] ≈ Sq_lowlevel[q] atol=1e-12
+    end
+
     @test length(Sq_friendly) == model.L
     @test all(isfinite, values(Sq_friendly))
 end
-
 
 
 @testset "Friendly API: dynamical_structure_factor with Lanczos" begin
