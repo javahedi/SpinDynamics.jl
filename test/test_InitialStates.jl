@@ -72,3 +72,38 @@ end
     @test_throws ArgumentError polarized_state(model_half; up=true)
     @test_throws ArgumentError polarized_state(model_half; up=false)
 end
+
+
+
+@testset "Polarized state with flips" begin
+    model_full = XXZChain(4)
+
+    ψ = polarized_state_with_flips(model_full, [2, 4])
+
+    @test ψ isa Vector{Float64}
+    @test length(ψ) == 16
+    @test count(!iszero, ψ) == 1
+    @test sum(abs2, ψ) ≈ 1.0
+
+    # Start 1111, flip sites 2 and 4 -> 0101
+    s_expected = UInt64(0b0101)
+    @test ψ[Int(s_expected) + 1] == 1.0
+
+    # Two flipped spins -> nup = 2
+    model_sector = XXZChain(4; nup=2)
+    ψ_sector = polarized_state_with_flips(model_sector, [2, 4])
+
+    @test ψ_sector isa Vector{Float64}
+    @test count(!iszero, ψ_sector) == 1
+    @test sum(abs2, ψ_sector) ≈ 1.0
+
+    # Wrong sector
+    model_wrong = XXZChain(4; nup=3)
+    @test_throws ArgumentError polarized_state_with_flips(
+        model_wrong, [2, 4]
+    )
+
+    # Invalid sites
+    @test_throws ArgumentError polarized_state_with_flips(model_full, [0])
+    @test_throws ArgumentError polarized_state_with_flips(model_full, [5])
+end

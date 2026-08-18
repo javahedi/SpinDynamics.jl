@@ -94,24 +94,40 @@ module InitialStates
     # Polarized with flipped sites
     # (start FM ↑, then flip given sites)
     # -------------------------------------------------
-    function polarized_state_with_flips(model::SpinModel.Model, flips::Vector{Int})
-        if model.mode == :sector
-            s = (UInt64(1) << model.L) - 1  # all ↑
-            for i in flips
-                s ⊻= (UInt64(1) << (i-1))  # flip site i (1-based)
+    function polarized_state_with_flips(
+            model::SpinModel.Model,
+            flips::Vector{Int},
+        )
+            L = model.L
+
+            for site in flips
+                1 <= site <= L || throw(
+                    ArgumentError("flip site $site is outside the model with L=$L")
+                )
             end
+
+            # Start from |↑↑...↑⟩
+            s = (UInt64(1) << L) - UInt64(1)
+
+            for site in flips
+                s ⊻= UInt64(1) << (site - 1)
+            end
+
             ψ0 = zeros(Float64, length(model.states))
-            ψ0[model.idxmap[s]] = 1.0
-            return ψ0
-        else
-            s = (UInt64(1) << model.L) - 1
-            for i in flips
-                s ⊻= (UInt64(1) << (i-1))
+
+            idx = if model.mode === :full
+                Int(s) + 1
+            else
+                get(model.idxmap, s, 0)
             end
-            return s
+
+            idx != 0 || throw(ArgumentError(
+                "requested flipped polarized state is not contained in the model basis"
+            ))
+
+            ψ0[idx] = 1.0
+            return ψ0
         end
-        
-    end
 
 
 
