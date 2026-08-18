@@ -4,10 +4,13 @@ using ..SpinModel
 using ..Hamiltonian
 using ..Lanczos
 using ..TimeEvolution
-
 using ..Observables
+using ..LanczosSqw
 
-export groundstate, time_evolve, structure_factor
+export groundstate,
+       time_evolve,
+       structure_factor,
+       dynamical_structure_factor
 
 
 """
@@ -99,6 +102,45 @@ function structure_factor(
     ψ::AbstractVector,
 )
     return Observables.structure_factor_Sq(ψ, model)
+end
+
+
+
+
+
+
+"""
+    dynamical_structure_factor(model, ψ0, q, ω; method=:lanczos, kwargs...)
+
+Compute the dynamical spin structure factor `S(q, ω)`.
+
+Currently supported methods:
+- `:lanczos`
+"""
+function dynamical_structure_factor(
+    model::SpinModel.Model,
+    ψ0::AbstractVector,
+    q::AbstractVector,
+    ω::AbstractVector;
+    method::Symbol=:lanczos,
+    kwargs...
+)
+    q_list = Float64.(q)
+    ω_range = Float64.(ω)
+
+    if method === :lanczos
+        return LanczosSqw.lanczos_sqw(
+            ψ0,
+            model,
+            q_list,
+            ω_range;
+            kwargs...
+        )
+    end
+
+    throw(ArgumentError(
+        "unsupported dynamical structure-factor method: $method"
+    ))
 end
 
 end

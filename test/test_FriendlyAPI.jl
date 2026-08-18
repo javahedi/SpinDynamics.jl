@@ -144,3 +144,35 @@ end
     @test length(Sq_friendly) == model.L
     @test all(isfinite, values(Sq_friendly))
 end
+
+
+
+@testset "Friendly API: dynamical_structure_factor with Lanczos" begin
+    model = XXZChain(4; Jxy=1.0, Jz=1.0, nup=2)
+    _, ψ0 = groundstate(model; lanc_m=6)
+
+    q = momenta(model)
+    ω = collect(range(0.0, 3.0; length=40))
+
+    S = dynamical_structure_factor(
+        model,
+        ψ0,
+        q,
+        ω;
+        method=:lanczos,
+        lanc_m=6,
+        eta=0.05,
+    )
+
+    @test size(S) == (length(q), length(ω))
+    @test all(isfinite, S)
+    @test all(S .>= -1e-12)
+
+    @test_throws ArgumentError dynamical_structure_factor(
+        model,
+        ψ0,
+        q,
+        ω;
+        method=:unknown,
+    )
+end
