@@ -199,7 +199,7 @@ module Lanczos
 
         for j in 1:lanc_m-1
             applyH!(w, V[j], model)               # w = H * V[j]
-            α[j] = real(dot(conj(V[j]), w))       # α_j
+            α[j] = real(dot(V[j], w))       # α_j
 
             # w = w - α_j V[j] - β_{j-1} V[j-1]
             @. w -= α[j] * V[j]
@@ -219,7 +219,7 @@ module Lanczos
         # last α (if didn't fill last slot)
         if m_eff == lanc_m
             applyH!(w, V[lanc_m], model)
-            α[lanc_m] = real(dot(conj(V[lanc_m]), w))
+            α[lanc_m] = real(dot(V[lanc_m], w))
         else
             α = α[1:m_eff]
             β = β[1:m_eff-1]
