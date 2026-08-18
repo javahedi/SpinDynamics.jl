@@ -2,7 +2,6 @@ module Chebyshev
 
     using LinearAlgebra
     using SpecialFunctions: besselj
-    using ArnoldiMethod
     using FFTW
 
     # Import from parent module's submodules
