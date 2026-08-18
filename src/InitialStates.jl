@@ -7,24 +7,30 @@ module InitialStates
     # Domain wall state
     # -------------------------------------------------
     function domain_wall_state(model::SpinModel.Model)
-        if model.mode == :sector
-            s = UInt64(0)
-            nup = model.nup
-            for i in 0:nup-1
-                s |= UInt64(1) << i
-            end
-            ψ0 = zeros(Float64, length(model.states))
-            ψ0[model.idxmap[s]] = 1.0
-            return ψ0
-        else
-            # full Hilbert space
-            s = UInt64(0)
-            nup = Int(ceil(model.L / 2))
-            for i in 0:(nup-1)
-                s |= UInt64(1) << i
-            end
-            return s
+        s = UInt64(0)
+
+        nup = model.mode === :sector ?
+            model.nup :
+            Int(ceil(model.L / 2))
+
+        for i in 0:(nup - 1)
+            s |= UInt64(1) << i
         end
+
+        ψ0 = zeros(Float64, length(model.states))
+
+        idx = if model.mode === :full
+            Int(s) + 1
+        else
+            get(model.idxmap, s, 0)
+        end
+
+        idx != 0 || throw(ArgumentError(
+            "domain-wall state is not contained in the model basis"
+        ))
+
+        ψ0[idx] = 1.0
+        return ψ0
     end
 
 
