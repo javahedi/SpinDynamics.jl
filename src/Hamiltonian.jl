@@ -304,19 +304,33 @@ module Hamiltonian
       # ------------------------------
     # Build S_q^z |psi0> vector (phi)
     # ------------------------------
-    function Sz_q_vector(model::SpinModel.Model, psi0::AbstractVector{T}, 
-                        q::Float64) where T<:Number
+    function Sz_q_vector(
+        model::SpinModel.Model,
+        psi0::AbstractVector{T},
+        q::Float64,
+    ) where T <: Number
+
         L = model.L
-        normfact = 1/sqrt(L)
-        phi = zeros(ComplexF64, length(psi0))
+        N = length(psi0)
 
-        # Precompute phase factors
-        phases = exp.(im * q * (0:L-1))
+        normfact = inv(sqrt(L))
+        phases = exp.(im * q * (0:(L - 1)))
 
-        # Parallelize over sites
-        @threads for r in 1:L
-            tmp = create_spin_operator(r, :z)(psi0, model)
-            @inbounds phi .+= normfact * phases[r] * ComplexF64.(tmp)
+        phi = zeros(ComplexF64, N)
+
+        Threads.@threads for idx in 1:N
+            state = model.mode === :full ?
+                UInt64(idx - 1) :
+                model.states[idx]
+
+            sq = 0.0 + 0.0im
+
+            for r in 0:(L - 1)
+                sq += phases[r + 1] * sz_value(bit_at(state, r))
+            end
+
+            @inbounds phi[idx] =
+                normfact * sq * ComplexF64(psi0[idx])
         end
 
         return phi

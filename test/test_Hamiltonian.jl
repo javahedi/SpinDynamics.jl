@@ -88,3 +88,23 @@ end
         @test_throws ArgumentError O(ψ, model)
     end
 end
+
+
+@testset "Sz_q_vector" begin
+    model = XXZChain(6; Jxy=1.0, Jz=1.0, nup=3)
+    _, ψ0 = groundstate(model; lanc_m=20)
+
+    q = Float64(π / 3)
+
+    phi = Sz_q_vector(model, ψ0, q)
+
+    phi_ref = zeros(ComplexF64, length(ψ0))
+    for r in 1:model.L
+        Szr = create_spin_operator(r, :z)
+        phi_ref .+= (
+            exp(im * q * (r - 1)) / sqrt(model.L)
+        ) .* Szr(ψ0, model)
+    end
+
+    @test phi ≈ phi_ref atol=1e-12
+end
