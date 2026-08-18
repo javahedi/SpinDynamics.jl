@@ -1,7 +1,8 @@
 module Lanczos
 
 
-    using  LinearAlgebra
+    using LinearAlgebra
+    using Random
     using ..SpinModel
     using ..Hamiltonian
 
@@ -23,22 +24,29 @@ module Lanczos
     Returns:
     - (Emin, Emax) : minimum and maximum eigenvalues
     """
-    function lanczos_extremal(applyH!, model::SpinModel.Model; 
-                            lanc_m::Int=100, tol::Float64=1e-12) 
+    function lanczos_extremal(
+            applyH!,
+            model::SpinModel.Model;
+            lanc_m::Int=100,
+            tol::Float64=1e-12,
+            rng::AbstractRNG=Random.default_rng(),
+        ) 
 
         N =  length(model.states)  # Hilber dim
+        m = min(lanc_m, N)
+
         # Initialize random starting vector
-        ψ0 = randn(ComplexF64, N)  # complex random vector
+        ψ0 = randn(rng, ComplexF64, N)  # complex random vector
         ψ0 ./= norm(ψ0)
 
-        α = zeros(Float64, lanc_m)
-        β = zeros(Float64, lanc_m-1)
+        α = zeros(Float64, m)
+        β = zeros(Float64, m-1)
 
         v_prev = copy(ψ0)
         w = similar(ψ0)
         v_curr = similar(ψ0)
 
-        for j in 1:lanc_m
+        for j in 1:m
             # Apply Hamiltonian
             applyH!(w, v_prev, model)
          
@@ -53,7 +61,7 @@ module Lanczos
                 @. w -= α[j] * v_prev + β[j-1] * v_curr
             end
 
-            if j < lanc_m
+            if j < m
                 β[j] = norm(w)
                 if β[j] < tol
                     α = α[1:j]
@@ -65,34 +73,42 @@ module Lanczos
         end
 
         actual_m = length(α)
-        if actual_m < lanc_m
+        if actual_m < m
             β = β[1:actual_m-1]
         end
 
         TR = SymTridiagonal(α, β)
-        evals = eigen(TR).values
+        #evals = eigen(TR).values
+        evals = eigvals(TR)
         return minimum(evals), maximum(evals)
     end
 
 
-    function lanczos_groundstate(applyH!, model::SpinModel.Model;
-                             lanc_m::Int=100, tol::Float64=1e-12,
-                             orthogonalize_tol::Float64=1e-10)
+    function lanczos_groundstate(
+                applyH!,
+                model::SpinModel.Model;
+                lanc_m::Int=100,
+                tol::Float64=1e-12,
+                orthogonalize_tol::Float64=1e-10,
+                rng::AbstractRNG=Random.default_rng(),
+            )
     
         N = length(model.states)
-        ψ0 = randn(Float64, N)
+        m = min(lanc_m, N)
+
+        ψ0 = randn(rng, Float64, N)
         ψ0 ./= norm(ψ0)
 
-        α = zeros(Float64, lanc_m)
-        β = zeros(Float64, lanc_m-1)
-        V = Matrix{Float64}(undef, N, lanc_m)
+        α = zeros(Float64, m)
+        β = zeros(Float64, m-1)
+        V = Matrix{Float64}(undef, N, m)
         V[:,1] = ψ0
 
         w = similar(ψ0)
         
-        m_actual = lanc_m
+        m_actual = m
 
-        for j in 1:lanc_m
+        for j in 1:m
             vj = view(V, :, j)
             applyH!(w, vj, model)
 
@@ -113,7 +129,7 @@ module Lanczos
                 w .= w .- α[j] .* vj .- β[j-1] .* view(V, :, j-1)
             end
 
-            if j < lanc_m
+            if j < m
                 β[j] = norm(w)
                 
                 # Check for breakdown and numerical stability
@@ -182,9 +198,10 @@ module Lanczos
                             lanc_m::Int=100, tol::Float64=1e-12)
 
         n = length(v)
-        V = Vector{Vector{ComplexF64}}(undef, lanc_m)
-        α = zeros(Float64, lanc_m)
-        β = zeros(Float64, lanc_m-1)
+        m = min(lanc_m, n)
+        V = Vector{Vector{ComplexF64}}(undef, m)
+        α = zeros(Float64, m)
+        β = zeros(Float64, m-1)
 
         # workspace
         w = zeros(ComplexF64, n)
@@ -195,11 +212,11 @@ module Lanczos
         end
 
         V[1] = copy(v) / normv
-        m_eff = lanc_m
+        m_eff = m
 
-        for j in 1:lanc_m-1
+        for j in 1:m-1
             applyH!(w, V[j], model)               # w = H * V[j]
-            α[j] = real(dot(conj(V[j]), w))       # α_j
+            α[j] = real(dot(V[j], w))       # α_j
 
             # w = w - α_j V[j] - β_{j-1} V[j-1]
             @. w -= α[j] * V[j]
@@ -217,9 +234,9 @@ module Lanczos
         end
 
         # last α (if didn't fill last slot)
-        if m_eff == lanc_m
-            applyH!(w, V[lanc_m], model)
-            α[lanc_m] = real(dot(conj(V[lanc_m]), w))
+        if m_eff == m
+            applyH!(w, V[m], model)
+            α[m] = real(dot(V[m], w))
         else
             α = α[1:m_eff]
             β = β[1:m_eff-1]
