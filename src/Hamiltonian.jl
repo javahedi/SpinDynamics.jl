@@ -65,6 +65,13 @@ module Hamiltonian
                     "state vector has length $(length(ψ)), expected $(length(model.states))"
                 ))
 
+            if model.mode === :sector && op_type !== :z
+                throw(ArgumentError(
+                    "operator $op_type changes total magnetization and cannot be applied " *
+                    "within a fixed-nup sector"
+                ))
+            end
+
             result = zeros(T, length(ψ))
 
             for (idx, state) in enumerate(model.states)

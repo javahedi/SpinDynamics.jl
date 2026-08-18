@@ -73,3 +73,18 @@ end
     Sz1 = create_spin_operator(1, :z)
     @test_throws DimensionMismatch Sz1(zeros(3), model)
 end
+
+
+@testset "Spin operators in fixed sectors" begin
+    model = XXZChain(4; nup=2)
+    ψ = zeros(Float64, length(model.states))
+    ψ[1] = 1.0
+
+    Sz = create_spin_operator(1, :z)
+    @test norm(Sz(ψ, model)) ≈ 0.5
+
+    for op in (:plus, :minus, :x, :y)
+        O = create_spin_operator(1, op)
+        @test_throws ArgumentError O(ψ, model)
+    end
+end
