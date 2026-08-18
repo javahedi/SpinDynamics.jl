@@ -86,7 +86,7 @@ end
         H[:, j] .= out
     end
 
-    exact = eigvalsh(H)
+    exact = eigvals(Hermitian(H))
 
     Emin, Emax = lanczos_extremal(
         apply_H!,

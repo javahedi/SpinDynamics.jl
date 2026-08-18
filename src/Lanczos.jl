@@ -67,11 +67,12 @@ module Lanczos
         end
 
         actual_m = length(α)
-        if actual_m < lanc_m
+        if actual_m < m
             β = β[1:actual_m-1]
         end
 
         TR = SymTridiagonal(α, β)
+        #evals = eigen(TR).values
         evals = eigvals(TR)
         return minimum(evals), maximum(evals)
     end
