@@ -125,8 +125,9 @@ module Hamiltonian
         fill!(out, zero(T))
 
         # Precompute thread-local storage
-        nth = nthreads()
-        thread_buffers = [zeros(T, N) for _ in 1:nth]
+        #nth = nthreads()
+        #thread_buffers = [zeros(T, N) for _ in 1:nth]
+        thread_buffers = [zeros(T, N) for _ in 1:Threads.maxthreadid()]
         
 
         Threads.@threads for idx in 1:N
@@ -176,8 +177,11 @@ module Hamiltonian
         end
 
         # Combine thread results
-        for i in 1:nth
-            @inbounds out .+= thread_buffers[i]
+        # for i in 1:nth
+        #     @inbounds out .+= thread_buffers[i]
+        # end
+        for buffer in thread_buffers
+            @inbounds out .+= buffer
         end
         
         return out

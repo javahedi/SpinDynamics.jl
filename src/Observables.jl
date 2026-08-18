@@ -13,8 +13,8 @@ module Observables
     # --------------------------------------------------
     function magnetization_per_site(ψ::AbstractVector{T}, model::SpinModel.Model) where T<:Number
         L, N = model.L, length(ψ)
-        nth = nthreads()
-        local_mags = [zeros(Float64, L) for _ in 1:nth]
+        nslots = Threads.maxthreadid()
+        local_mags = [zeros(Float64, L) for _ in 1:nslots]
 
         Threads.@threads for idx in 1:N
             prob = abs2(ψ[idx])
@@ -44,11 +44,10 @@ module Observables
     function connected_correlations(ψ::AbstractVector{T}, model::SpinModel.Model) where T<:Number
         L = model.L
         N = length(ψ)
-        nth = nthreads()
-
-        # Thread-local accumulators for <S_i S_j> contributions
-        local_sz = [zeros(Float64, L, L) for _ in 1:nth]
-        local_Si = [zeros(Float64, L) for _ in 1:nth]
+        
+        nslots = Threads.maxthreadid()
+        local_sz = [zeros(Float64, L, L) for _ in 1:nslots]
+        local_Si = [zeros(Float64, L) for _ in 1:nslots]
 
         Threads.@threads for idx in 1:N
             amp2 = abs2(ψ[idx])
@@ -75,7 +74,7 @@ module Observables
         # Reduce across threads
         SzSz = zeros(Float64, L, L)
         S_i = zeros(Float64, L)
-        for t in 1:nth
+        for t in 1:nslots
             SzSz .+= local_sz[t]
             S_i .+= local_Si[t]
         end

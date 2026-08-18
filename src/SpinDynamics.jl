@@ -9,7 +9,7 @@ module SpinDynamics
 
     include("SpinModel.jl")
     using .SpinModel
-    export Model, build_model, nn_hopping, long_range_hopping
+    export Model, build_model, nn_hopping, long_range_hopping, XXZChain, momenta
 
     include("Hamiltonian.jl")
     using .Hamiltonian
@@ -59,6 +59,15 @@ module SpinDynamics
 
     export kpm_dynamical_correlation, kpm_dynamical_correlation_matrix, 
             run_kpm_dynamical, kpm_correlation_matrix, Sqω
+
+
+    include("PublicAPI.jl")
+    using .PublicAPI
+    export groundstate,
+       time_evolve,
+       structure_factor,
+       dynamical_structure_factor
+
 
 
 end

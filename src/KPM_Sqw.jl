@@ -196,12 +196,14 @@ module KPM_Sqw
             
          
             phi = Sz_q_vector(model, ψ0c, q)
-            phi ./= norm(phi)
-            
-            if norm(phi) == 0
+            norm_phi = norm(phi)
+
+            if norm_phi == 0
                 Smat[iq, :] .= 0.0
                 continue
             end
+
+            phi ./= norm_phi
 
 
             #if iq>1
