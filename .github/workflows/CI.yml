@@ -43,7 +43,7 @@ jobs:
             ${{ runner.os }}-julia-${{ matrix.version }}-${{ matrix.arch }}-
             ${{ runner.os }}-julia-
       
-      - uses: julia-actions/setup-julia@v2
+      - uses: julia-actions/setup-julia@v3
         with:
           version: ${{ matrix.version }}
           arch: ${{ matrix.arch }}
